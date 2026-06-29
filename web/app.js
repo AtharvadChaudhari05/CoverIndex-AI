@@ -20,6 +20,7 @@ let activeChatHistory = [];
 let hasMessages = false;
 let uploadedFiles = [];
 let stagedAttachment = null;
+let indexedPolicies = [];
 
 // DOM Elements
 const landingPage = document.getElementById("landingPage");
@@ -65,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
   typeGreeting();
   setupEventListeners();
   loadIndexStatus();
+  loadIndexedPolicies();
 });
 
 // Typing greeting text effect
@@ -131,6 +133,19 @@ async function loadIndexStatus() {
     }
   } catch (e) {
     statusText.textContent = "Offline";
+  }
+}
+
+// Load pre-indexed policies list
+async function loadIndexedPolicies() {
+  try {
+    const response = await fetch("/api/policies");
+    const payload = await response.json();
+    if (payload.policies) {
+      indexedPolicies = payload.policies.map(p => p.file_name.toLowerCase());
+    }
+  } catch (e) {
+    console.error("Failed to load indexed policies:", e);
   }
 }
 
@@ -451,6 +466,8 @@ async function submitQuery(query) {
   if (fileToUpload) {
     clearStagedAttachment();
     
+    const isAlreadyIndexed = indexedPolicies.includes(fileToUpload.name.toLowerCase());
+    
     if (!hasMessages) {
       activeSessionName = `Review: ${fileToUpload.name}`;
       chatSessionTitle.textContent = activeSessionName;
@@ -458,35 +475,41 @@ async function submitQuery(query) {
     }
     addMessage("user", query, fileToUpload.name);
     
-    // Add loading message
-    loadingId = addMessage("assistant", `### Uploading & Indexing... \nUploading and parsing **${fileToUpload.name}** to CoverIndex AI. Reading pages and extracts...`);
-    
-    const formData = new FormData();
-    formData.append("file", fileToUpload);
-    
-    try {
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: formData
-      });
-      const uploadPayload = await uploadResponse.json();
-      if (!uploadResponse.ok) {
-        throw new Error(uploadPayload.error || "Failed to upload file");
-      }
+    if (isAlreadyIndexed) {
+      // Document is already indexed, bypass upload completely
+      loadingId = addMessage("assistant", `Thinking...`);
+      fileUploadedName = fileToUpload.name;
+    } else {
+      // Upload and index new document
+      loadingId = addMessage("assistant", `### Uploading & Indexing... \nUploading and parsing **${fileToUpload.name}** to CoverIndex AI. Reading pages and extracts...`);
       
-      // Update loading bubble to query status
-      updateMessage(loadingId, `### Analyzing Document...\nDocument **${fileToUpload.name}** uploaded successfully. Running query: "${query}"...`);
-      fileUploadedName = uploadPayload.filename || fileToUpload.name;
-      uploadedFiles.push(fileUploadedName);
-      loadIndexStatus();
-    } catch (uploadError) {
-      updateMessage(loadingId, `### Upload Failed\nCould not index policy document: **${uploadError.message}**.`);
-      // Reset composer
-      composerInput.disabled = false;
-      composerSendBtn.disabled = false;
-      composerSendBtn.innerHTML = `<i data-lucide="arrow-up"></i>`;
-      if (window.lucide) lucide.createIcons();
-      return;
+      const formData = new FormData();
+      formData.append("file", fileToUpload);
+      
+      try {
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData
+        });
+        const uploadPayload = await uploadResponse.json();
+        if (!uploadResponse.ok) {
+          throw new Error(uploadPayload.error || "Failed to upload file");
+        }
+        
+        // Update loading bubble to query status
+        updateMessage(loadingId, `### Analyzing Document...\nDocument **${fileToUpload.name}** uploaded successfully. Running query: "${query}"...`);
+        fileUploadedName = uploadPayload.filename || fileToUpload.name;
+        uploadedFiles.push(fileUploadedName);
+        loadIndexStatus();
+      } catch (uploadError) {
+        updateMessage(loadingId, `### Upload Failed\nCould not index policy document: **${uploadError.message}**.`);
+        // Reset composer
+        composerInput.disabled = false;
+        composerSendBtn.disabled = false;
+        composerSendBtn.innerHTML = `<i data-lucide="arrow-up"></i>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
     }
   } else {
     // Normal message flow

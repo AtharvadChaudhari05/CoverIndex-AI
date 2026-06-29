@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoverIndex AI - Your AI Insurance Assistant</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- Screen 1: Landing Page -->
+  <div class="landing-page" id="landingPage">
+    <!-- Left Pane: Gradient & Policy X-ray Mockup -->
+    <div class="landing-left">
+      <div class="landing-brand">
+        <i data-lucide="shield-check" class="brand-logo-icon"></i>
+        <span>CoverIndex AI</span>
+      </div>
+
+      <div class="mockup-card-container">
+        <div class="mockup-card">
+          <div class="mockup-header">
+            <div class="mockup-icon-wrapper">
+              <i data-lucide="sparkles"></i>
+            </div>
+            <div>
+              <div class="mockup-title">Policy X-ray</div>
+              <div class="mockup-subtitle">HDFC ERGO - Optima Secure</div>
+            </div>
+          </div>
+          <div class="mockup-stats">
+            <div class="mockup-stat">
+              <div class="stat-label">SUM INSURED</div>
+              <div class="stat-val">₹10 L</div>
+            </div>
+            <div class="mockup-stat">
+              <div class="stat-label">PREMIUM</div>
+              <div class="stat-val">₹24,568<span>/yr</span></div>
+            </div>
+          </div>
+          <div class="mockup-list">
+            <div class="mockup-list-item checked">
+              <i data-lucide="check-circle-2"></i>
+              <span>Pre & Post Hospitalization</span>
+            </div>
+            <div class="mockup-list-item checked">
+              <i data-lucide="check-circle-2"></i>
+              <span>Day Care Treatments</span>
+            </div>
+            <div class="mockup-list-item yellow">
+              <i data-lucide="help-circle"></i>
+              <span>Maternity (after 3 yrs)</span>
+            </div>
+            <div class="mockup-list-item crossed">
+              <i data-lucide="x-circle"></i>
+              <span>Routine Dental</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="landing-left-footer">
+        <h3>Get an instant Policy X-ray</h3>
+        <p>See coverage, gaps and exclusions at a glance.</p>
+        <div class="slider-dots">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        <div class="powered-by">Powered by CoverIndex</div>
+      </div>
+    </div>
+
+    <!-- Right Pane: Actions & Ask Button -->
+    <div class="landing-right">
+      <div class="landing-right-content">
+        <h1 class="main-title">Your <span>AI Insurance</span> Assistant</h1>
+        <p class="main-subtitle">Compare quotes, buy policies, raise claims — all through conversation.</p>
+
+        <div class="action-grid-2x2">
+          <div class="action-card-landing" onclick="enterDashboard('quotes')">
+            <div class="icon-box blue">
+              <i data-lucide="car"></i>
+            </div>
+            <span>Get Quotes</span>
+          </div>
+          <div class="action-card-landing" onclick="enterDashboard('scan')">
+            <div class="icon-box purple">
+              <i data-lucide="file-text"></i>
+            </div>
+            <span>Scan Policy PDF</span>
+          </div>
+          <div class="action-card-landing" onclick="enterDashboard('renew')">
+            <div class="icon-box orange">
+              <i data-lucide="refresh-cw"></i>
+            </div>
+            <span>Renew Insurance</span>
+          </div>
+          <div class="action-card-landing" onclick="enterDashboard('ask')">
+            <div class="icon-box cyan">
+              <i data-lucide="help-circle"></i>
+            </div>
+            <span>Ask Anything</span>
+          </div>
+        </div>
+
+        <button class="primary-ask-btn" onclick="enterDashboard()">
+          <i data-lucide="message-square"></i> Ask CoverIndex AI
+        </button>
+
+        <p class="agree-text">By clicking, you agree to our Privacy Policy and Terms & Conditions.</p>
+        <div class="signin-link">Already have an account? <span onclick="enterDashboard()">Sign in <i data-lucide="chevron-right"></i></span></div>
+      </div>
+
+      <footer class="landing-right-footer">
+        <div class="footer-badge"><i data-lucide="check"></i> IRDAI-certified</div>
+        <div class="footer-badge"><i data-lucide="users"></i> 50+ insurers</div>
+        <div class="footer-badge"><i data-lucide="clock"></i> 24x7</div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Screen 2 & 3: Chat Dashboard -->
+  <div class="app-dashboard hidden" id="appDashboard">
+    <!-- Left Sidebar -->
+    <aside class="app-sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-brand">
+          <i data-lucide="shield-check" class="brand-logo-icon"></i>
+          <span>CoverIndex AI</span>
+          <button class="icon-btn collapse-sidebar-btn" id="collapseSidebarBtn" title="Collapse Sidebar">
+            <i data-lucide="align-justify"></i>
+          </button>
+        </div>
+
+        <nav class="nav-menu">
+          <a href="#" class="nav-item active" id="btnNewChat">
+            <i data-lucide="plus" class="nav-icon"></i>
+            <span>New Chat</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i data-lucide="search" class="nav-icon"></i>
+            <span>Search Chats</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i data-lucide="shield" class="nav-icon"></i>
+            <span>Insurance Guide</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i data-lucide="sparkles" class="nav-icon"></i>
+            <span>Platform Guide</span>
+          </a>
+          <a href="#" class="nav-item" id="btnVaultToggle">
+            <i data-lucide="folder-lock" class="nav-icon"></i>
+            <span>Insurance Vault</span>
+            <span class="nav-badge">NEW</span>
+          </a>
+        </nav>
+
+        <!-- Dynamic Chats List Section -->
+        <div class="chats-section">
+          <div class="section-divider">CHATS</div>
+          <div class="chats-list" id="chatsList">
+            <div class="no-chats-placeholder">
+              <i data-lucide="message-square"></i>
+              <span>No conversations yet</span>
+            </div>
+          </div>
+          <a href="#" class="view-archived"><i data-lucide="archive"></i> View archived</a>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer User Profile -->
+      <div class="sidebar-user">
+        <div class="user-profile">
+          <div class="avatar-guest">G</div>
+          <div>
+            <div class="user-name">Guest</div>
+            <div class="user-tag">Sign in with phone</div>
+          </div>
+        </div>
+        <button class="icon-btn dots-btn"><i data-lucide="more-horizontal"></i></button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="app-workspace">
+      <!-- Top header bar -->
+      <header class="workspace-header">
+        <div class="header-left">
+          <button class="icon-btn header-menu-btn" id="mobileMenuBtn">
+            <i data-lucide="menu"></i>
+          </button>
+          <span class="active-chat-title" id="chatSessionTitle">New Chat</span>
+        </div>
+        <div class="header-right">
+          <!-- Ready status badge -->
+          <div class="index-badge">
+            <span class="pulse-dot"></span>
+            <span id="statusText">Agent Active</span>
+          </div>
+          <!-- Upload Shortcut button -->
+          <button class="upload-badge-btn" id="headerUploadBtn" title="Upload Document for instant analysis">
+            <i data-lucide="upload-cloud"></i> Upload PDF
+          </button>
+          <button class="icon-btn" id="btnToggleInspector" title="Toggle Inspector Drawer">
+            <i data-lucide="layout-sidebar-open"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Center Scrolling Chat Feed / Welcome State -->
+      <div class="workspace-body" id="workspaceBody">
+        
+        <!-- Welcome Screen (Shown initially, hidden when messages start) -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <h2 class="welcome-greeting">Looking to <span class="typing-text" id="typingTarget">renew a policy?</span></h2>
+          
+          <div class="welcome-grid-2x3">
+            <div class="welcome-card" onclick="triggerPreset('quotes')">
+              <div class="welcome-card-icon blue"><i data-lucide="car"></i></div>
+              <div>
+                <h4>Get Quotes</h4>
+                <p>Enter vehicle number</p>
+              </div>
+            </div>
+            <div class="welcome-card" onclick="triggerUpload()">
+              <div class="welcome-card-icon purple"><i data-lucide="file-text"></i></div>
+              <div>
+                <h4>Scan Policy PDF</h4>
+                <p>Upload for instant X-ray</p>
+              </div>
+            </div>
+            <div class="welcome-card" onclick="triggerPreset('renew')">
+              <div class="welcome-card-icon orange"><i data-lucide="refresh-cw"></i></div>
+              <div>
+                <h4>Renew Insurance</h4>
+                <p>Compare plans & save</p>
+              </div>
+            </div>
+            <div class="welcome-card" onclick="triggerPreset('vault')">
+              <div class="welcome-card-icon yellow"><i data-lucide="folder-lock"></i></div>
+              <div>
+                <h4>My Policies</h4>
+                <p>View status & documents</p>
+              </div>
+            </div>
+            <div class="welcome-card" onclick="triggerPreset('claim')">
+              <div class="welcome-card-icon cyan"><i data-lucide="heart-handshake"></i></div>
+              <div>
+                <h4>Raise a Claim</h4>
+                <p>File & track claims</p>
+              </div>
+            </div>
+            <div class="welcome-card" onclick="triggerPreset('ask')">
+              <div class="welcome-card-icon pink"><i data-lucide="help-circle"></i></div>
+              <div>
+                <h4>Ask Anything</h4>
+                <p>IDV, addons, NCB & more</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat window messages container (hidden initially) -->
+        <div class="chat-feed-window hidden" id="chatFeedWindow">
+          <div class="chat-history" id="chatHistory"></div>
+        </div>
+
+      </div>
+
+      <!-- Chat Footer Composer -->
+      <footer class="workspace-footer">
+        <!-- Attachment preview bar -->
+        <div class="attachment-preview-bar hidden" id="attachmentPreviewBar">
+          <div class="attachment-preview-pill">
+            <i data-lucide="file-text" class="file-icon"></i>
+            <span class="attachment-file-name" id="attachmentFileName">policy.pdf</span>
+            <button type="button" class="remove-attachment-btn" id="removeAttachmentBtn" title="Remove attachment">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        </div>
+        <form class="chat-composer" id="composerForm">
+          <button type="button" class="composer-action-btn" id="attachmentBtn" title="Attach Policy PDF">
+            <i data-lucide="paperclip" id="composerClipIcon"></i>
+          </button>
+          <input type="text" id="composerInput" placeholder="Ask CoverIndex AI..." autocomplete="off" />
+          <button type="button" class="composer-action-btn mic-btn" title="Voice Search"><i data-lucide="mic"></i></button>
+          <button type="submit" class="composer-send-btn" id="composerSendBtn"><i data-lucide="arrow-up"></i></button>
+        </form>
+        <div class="composer-subtext">50 messages left this hour - 500 left today</div>
+      </footer>
+    </main>
+
+    <!-- Right Sidebar Drawer (Inspector) -->
+    <aside class="app-inspector hidden" id="appInspector">
+      <div class="inspector-header">
+        <h3>Inspection Console</h3>
+        <button class="icon-btn close-inspector-btn" id="closeInspectorBtn"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="inspector-tabs">
+        <button class="inspector-tab active" data-inspector-tab="sources"><i data-lucide="file-check"></i> Sources</button>
+        <button class="inspector-tab" data-inspector-tab="trace"><i data-lucide="route"></i> Routing Trace</button>
+      </div>
+
+      <div class="inspector-body">
+        <div class="inspector-tab-content active" id="inspector-tab-sources">
+          <div class="inspector-subtitle">GROUNDING DOCUMENTS</div>
+          <div id="inspectorSourcesList">
+            <div class="inspector-empty-state">
+              <i data-lucide="file-question"></i>
+              <p>No grounding sources analyzed. Ask a policy-related question to see citations.</p>
+            </div>
+          </div>
+        </div>
+        <div class="inspector-tab-content" id="inspector-tab-trace">
+          <div class="inspector-subtitle">PIPELINE TRACE DETAILS</div>
+          <div id="inspectorTraceTimeline">
+            <div class="inspector-empty-state">
+              <i data-lucide="network"></i>
+              <p>Routing trace timeline will be visualised here.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Hidden inputs for file upload -->
+  <input type="file" id="pdfFileInput" accept="application/pdf" style="display: none;" />
+
+  <!-- Scripts -->
+  <script src="/app.js"></script>
+</body>
+</html>

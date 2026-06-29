@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caching
+cache/
+
+# Environments
+.env
+.env.backend
+.env.frontend
+.env.local
+.env.*.local
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific large files or documents
+capstone_overleaf.pdf
+Policy Documents/
+*.zip
+*.pdf
+
+# IDEs/Agents
+.agents/
+.antigravity/
+.gemini/
+.vscode/
+.idea/

@@ -72,9 +72,12 @@ def load_cached_index(signature: str | None) -> CachedIndex | None:
 
 
 def save_cached_index(index: CachedIndex) -> None:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_file = CACHE_DIR / "page_index.json"
-    cache_file.write_text(json.dumps(index.to_json(), ensure_ascii=True), encoding="utf-8")
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_file = CACHE_DIR / "page_index.json"
+        cache_file.write_text(json.dumps(index.to_json(), ensure_ascii=True), encoding="utf-8")
+    except OSError as e:
+        print(f"[InsureIndex AI] Warning: Could not write cache file (Read-only filesystem): {e}")
 
 
 def build_page_index(source: Path | None = None) -> tuple[list[PageRecord], str, Path | None]:

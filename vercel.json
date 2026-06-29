@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/**/*.py": {
+    "api/index.py": {
       "includeFiles": "cache/page_index.json",
       "maxDuration": 60,
       "memory": 1024

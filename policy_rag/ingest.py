@@ -57,14 +57,14 @@ def source_signature(source: Path) -> str:
     return hasher.hexdigest()
 
 
-def load_cached_index(signature: str) -> CachedIndex | None:
+def load_cached_index(signature: str | None) -> CachedIndex | None:
     cache_file = CACHE_DIR / "page_index.json"
     if not cache_file.exists():
         return None
     try:
         payload = json.loads(cache_file.read_text(encoding="utf-8"))
         cached = CachedIndex.from_json(payload)
-        if cached.signature == signature:
+        if signature is None or cached.signature == signature:
             return cached
     except Exception:
         return None
@@ -80,6 +80,10 @@ def save_cached_index(index: CachedIndex) -> None:
 def build_page_index(source: Path | None = None) -> tuple[list[PageRecord], str, Path | None]:
     source_path = source or resolve_source_path()
     if source_path is None:
+        # Try to load pre-built index cache directly (crucial for serverless environments)
+        cached = load_cached_index(None)
+        if cached is not None:
+            return cached.records, cached.signature, None
         return [], "no-source", None
 
     signature = source_signature(source_path)

@@ -50,12 +50,10 @@ def source_signature(source: Path) -> str:
                 stat = path.stat()
                 hasher.update(str(path.relative_to(source)).replace("\\", "/").encode("utf-8"))
                 hasher.update(str(stat.st_size).encode("utf-8"))
-                hasher.update(str(int(stat.st_mtime)).encode("utf-8"))
     else:
         stat = source.stat()
-        hasher.update(str(source.resolve()).encode("utf-8"))
+        hasher.update(str(source.name).encode("utf-8"))
         hasher.update(str(stat.st_size).encode("utf-8"))
-        hasher.update(str(int(stat.st_mtime)).encode("utf-8"))
     return hasher.hexdigest()
 
 

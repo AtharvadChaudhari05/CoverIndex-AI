@@ -24,9 +24,7 @@ Thumbs.db
 
 # Project-specific large files or documents
 capstone_overleaf.pdf
-Policy Documents/
 *.zip
-*.pdf
 
 # IDEs/Agents
 .agents/

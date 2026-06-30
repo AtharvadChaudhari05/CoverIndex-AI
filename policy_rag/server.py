@@ -218,11 +218,11 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000) -> None:
-    print("PolicyLens AI server starting up...")
-    print("Index will be loaded lazily on the first request.")
+    print("PolicyLens AI server starting up...", flush=True)
+    print("Index will be loaded lazily on the first request.", flush=True)
 
     server = ThreadingHTTPServer((host, port), PolicyLensHandler)
-    print(f"Open http://{host}:{port}")
+    print(f"Open http://{host}:{port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

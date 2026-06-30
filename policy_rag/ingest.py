@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import hashlib
 import io
 import json
@@ -58,11 +59,18 @@ def source_signature(source: Path) -> str:
 
 
 def load_cached_index(signature: str | None) -> CachedIndex | None:
-    cache_file = CACHE_DIR / "page_index.json"
-    if not cache_file.exists():
+    # Support both gzip (.json.gz) and legacy plain JSON (.json)
+    gz_file = CACHE_DIR / "page_index.json.gz"
+    plain_file = CACHE_DIR / "page_index.json"
+    cache_file = gz_file if gz_file.exists() else (plain_file if plain_file.exists() else None)
+    if cache_file is None:
         return None
     try:
-        payload = json.loads(cache_file.read_text(encoding="utf-8"))
+        if cache_file.suffix == ".gz":
+            raw = gzip.decompress(cache_file.read_bytes()).decode("utf-8")
+        else:
+            raw = cache_file.read_text(encoding="utf-8")
+        payload = json.loads(raw)
         cached = CachedIndex.from_json(payload)
         if signature is None or cached.signature == signature:
             return cached
@@ -74,8 +82,13 @@ def load_cached_index(signature: str | None) -> CachedIndex | None:
 def save_cached_index(index: CachedIndex) -> None:
     try:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        cache_file = CACHE_DIR / "page_index.json"
-        cache_file.write_text(json.dumps(index.to_json(), ensure_ascii=True), encoding="utf-8")
+        cache_file = CACHE_DIR / "page_index.json.gz"
+        raw = json.dumps(index.to_json(), ensure_ascii=True).encode("utf-8")
+        cache_file.write_bytes(gzip.compress(raw, compresslevel=6))
+        # Remove old plain JSON if it exists
+        old_plain = CACHE_DIR / "page_index.json"
+        if old_plain.exists():
+            old_plain.unlink(missing_ok=True)
     except OSError as e:
         print(f"[InsureIndex AI] Warning: Could not write cache file (Read-only filesystem): {e}")
 
@@ -134,6 +147,9 @@ def extract_records_from_pdf(data: bytes, file_name: str, source_path: str) -> l
         text = normalize_text(page.extract_text() or "")
         if not text:
             continue
+        # Cap text per page to limit memory/cache size; 3000 chars is ample for LLM context
+        if len(text) > 3000:
+            text = text[:3000]
 
         title = choose_title_from_text(text, base_title)
         if page_number == 1 and title:

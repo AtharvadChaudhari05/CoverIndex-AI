@@ -22,10 +22,16 @@ class PageRecord:
 
     def to_json(self) -> dict[str, Any]:
         payload = asdict(self)
+        # Don't persist token_counts – recompute at load time to keep cache small
+        payload.pop("token_counts", None)
         return payload
 
     @classmethod
     def from_json(cls, payload: dict[str, Any]) -> "PageRecord":
+        from .utils import token_counts as _tc
+        # Recompute token_counts from text if not present in cache
+        if "token_counts" not in payload:
+            payload = {**payload, "token_counts": dict(_tc(payload.get("text", "")))}
         return cls(**payload)
 
 

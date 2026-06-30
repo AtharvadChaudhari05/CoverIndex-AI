@@ -5,7 +5,7 @@ __pycache__/
 
 # Caching
 cache/*
-!cache/page_index.json
+!cache/page_index.json.gz
 
 # Environments
 .env

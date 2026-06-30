@@ -26,12 +26,6 @@ def _get_index():
     return _INDEX
 
 
-# Pre-warm the index at import time so Vercel's function container caches it
-try:
-    _get_index()
-except Exception as _e:
-    print(f"[CoverIndex AI] Pre-warm failed (will retry on request): {_e}")
-
 
 # ── Vercel serverless handler ────────────────────────────────────────────────
 class handler(BaseHTTPRequestHandler):

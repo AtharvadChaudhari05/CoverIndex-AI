@@ -149,23 +149,23 @@
         </div>
 
         <nav class="nav-menu">
-          <a href="#" class="nav-item active" id="btnNewChat">
+          <a href="#" class="nav-item active" id="btnNavNewChat">
             <i data-lucide="plus" class="nav-icon"></i>
             <span>New Chat</span>
           </a>
-          <a href="#" class="nav-item toast-btn" data-feature="Search Chats">
+          <a href="#" class="nav-item" id="btnNavSearch">
             <i data-lucide="search" class="nav-icon"></i>
             <span>Search Chats</span>
           </a>
-          <a href="#" class="nav-item toast-btn" data-feature="Insurance Guide">
+          <a href="#" class="nav-item" id="btnNavGuide">
             <i data-lucide="shield" class="nav-icon"></i>
             <span>Insurance Guide</span>
           </a>
-          <a href="#" class="nav-item toast-btn" data-feature="Platform Guide">
+          <a href="#" class="nav-item" id="btnNavPlatform">
             <i data-lucide="sparkles" class="nav-icon"></i>
             <span>Platform Guide</span>
           </a>
-          <a href="#" class="nav-item toast-btn" id="btnVaultToggle" data-feature="Insurance Vault">
+          <a href="#" class="nav-item" id="btnNavVault">
             <i data-lucide="folder-lock" class="nav-icon"></i>
             <span>Insurance Vault</span>
             <span class="nav-badge">NEW</span>
@@ -278,14 +278,149 @@
         </div>
 
         <!-- Chat window messages container (hidden initially) -->
-        <div class="chat-feed-window hidden" id="chatFeedWindow">
+        <div class="view-screen hidden" id="chatFeedWindow">
           <div class="chat-history" id="chatHistory"></div>
+        </div>
+
+        <!-- Search Chats Screen (hidden initially) -->
+        <div class="view-screen hidden" id="searchChatsScreen">
+          <div class="screen-header">
+            <div class="screen-icon"><i data-lucide="search"></i></div>
+            <h2>Search Conversations</h2>
+            <p>Find past policies, quotes, and answers.</p>
+          </div>
+          <div class="search-bar-container">
+            <i data-lucide="search"></i>
+            <input type="text" placeholder="Search for 'term insurance IDV'..." />
+          </div>
+          <div class="empty-state-card">
+            <i data-lucide="inbox"></i>
+            <h3>No matching chats found</h3>
+            <p>Try searching for a different keyword or start a new chat.</p>
+          </div>
+        </div>
+
+        <!-- Insurance Guide Screen (hidden initially) -->
+        <div class="view-screen hidden" id="insuranceGuideScreen">
+          <div class="screen-header">
+            <div class="screen-icon"><i data-lucide="shield"></i></div>
+            <h2>Insurance Guide</h2>
+            <p>Explore resources and understand coverage options.</p>
+          </div>
+          <div class="guide-grid">
+            <div class="guide-card">
+              <div class="guide-icon"><i data-lucide="activity"></i></div>
+              <h3>Health Insurance</h3>
+              <p>Learn about waiting periods, copays, and exclusions.</p>
+              <button class="guide-btn" onclick="triggerPreset('ask', 'What are standard waiting periods in health insurance?')">Learn More</button>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon"><i data-lucide="car"></i></div>
+              <h3>Motor Insurance</h3>
+              <p>Understand IDV, NCB, and zero depreciation add-ons.</p>
+              <button class="guide-btn" onclick="triggerPreset('ask', 'How is IDV calculated for a 3 year old car?')">Learn More</button>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon"><i data-lucide="heart"></i></div>
+              <h3>Term Life</h3>
+              <p>Secure your family's future with the right sum assured.</p>
+              <button class="guide-btn" onclick="triggerPreset('ask', 'What is a term life insurance policy?')">Learn More</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Platform Guide Screen (hidden initially) -->
+        <div class="view-screen hidden" id="platformGuideScreen">
+          <div class="screen-header">
+            <div class="screen-icon"><i data-lucide="sparkles"></i></div>
+            <h2>Platform Guide</h2>
+            <p>Master CoverIndex AI features and workflows.</p>
+          </div>
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><i data-lucide="file-text"></i></div>
+              <div class="feature-text">
+                <h4>1. Upload Policy PDFs</h4>
+                <p>Click the attachment clip to upload any policy document. The AI will instantly read and index it for your questions.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><i data-lucide="layout-sidebar-open"></i></div>
+              <div class="feature-text">
+                <h4>2. Inspect Grounding Sources</h4>
+                <p>Click the sidebar icon on the top right to open the Inspection Console. See exactly which pages of the PDF the AI used.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><i data-lucide="cpu"></i></div>
+              <div class="feature-text">
+                <h4>3. View Routing Trace</h4>
+                <p>The AI automatically routes questions to specialized agents (e.g. HDFC Ergo vs SBI General). Check the Trace tab to see how it thinks.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insurance Vault Screen (hidden initially) -->
+        <div class="view-screen hidden" id="insuranceVaultScreen">
+          <div class="screen-header">
+            <div class="screen-icon"><i data-lucide="folder-lock"></i></div>
+            <h2>Insurance Vault</h2>
+            <p>Your secure repository of indexed policy documents.</p>
+          </div>
+          <div class="vault-stats">
+            <div class="vault-stat">
+              <span>Indexed Policies</span>
+              <strong>72</strong>
+            </div>
+            <div class="vault-stat">
+              <span>Total Pages</span>
+              <strong>1,954</strong>
+            </div>
+            <div class="vault-stat">
+              <span>Storage Status</span>
+              <strong class="text-green">Active</strong>
+            </div>
+          </div>
+          <div class="vault-table-container">
+            <table class="vault-table">
+              <thead>
+                <tr>
+                  <th>Document Name</th>
+                  <th>Insurer</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="vaultTableBody">
+                <!-- Populated by JS -->
+                <tr>
+                  <td><i data-lucide="file-text"></i> SBI General Policy.pdf</td>
+                  <td>SBI General</td>
+                  <td><span class="badge success">Verified</span></td>
+                  <td><button class="icon-btn"><i data-lucide="eye"></i></button></td>
+                </tr>
+                <tr>
+                  <td><i data-lucide="file-text"></i> HDFC Ergo Optima.pdf</td>
+                  <td>HDFC Ergo</td>
+                  <td><span class="badge success">Verified</span></td>
+                  <td><button class="icon-btn"><i data-lucide="eye"></i></button></td>
+                </tr>
+                <tr>
+                  <td><i data-lucide="file-text"></i> ICICI Lombard Motor.pdf</td>
+                  <td>ICICI Lombard</td>
+                  <td><span class="badge success">Verified</span></td>
+                  <td><button class="icon-btn"><i data-lucide="eye"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>
 
       <!-- Chat Footer Composer -->
-      <footer class="workspace-footer">
+      <footer class="workspace-footer" id="workspaceFooter">
         <!-- Attachment preview bar -->
         <div class="attachment-preview-bar hidden" id="attachmentPreviewBar">
           <div class="attachment-preview-pill">

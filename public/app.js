@@ -150,10 +150,47 @@ async function loadIndexedPolicies() {
     const payload = await response.json();
     if (payload.policies) {
       indexedPolicies = payload.policies.map(p => p.file_name.toLowerCase());
+      populateVaultTable(payload.policies);
     }
   } catch (e) {
     console.error("Failed to load indexed policies:", e);
   }
+}
+
+// Populate Insurance Vault Table
+function populateVaultTable(policies) {
+  const tbody = document.getElementById("vaultTableBody");
+  if (!tbody) return;
+  
+  // Clear hardcoded rows
+  tbody.innerHTML = "";
+  
+  if (policies.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted)">No policies indexed yet. Upload one to get started!</td></tr>`;
+    return;
+  }
+
+  policies.forEach(policy => {
+    // Guess insurer from filename
+    let insurer = "General";
+    const lowName = policy.file_name.toLowerCase();
+    if (lowName.includes("hdfc")) insurer = "HDFC Ergo";
+    else if (lowName.includes("sbi")) insurer = "SBI General";
+    else if (lowName.includes("icici")) insurer = "ICICI Lombard";
+    else if (lowName.includes("tata")) insurer = "Tata AIG";
+    else if (lowName.includes("lic")) insurer = "LIC India";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><i data-lucide="file-text"></i> ${policy.file_name}</td>
+      <td>${insurer}</td>
+      <td><span class="badge success">Verified</span></td>
+      <td><button class="icon-btn" onclick="triggerPreset('ask', 'Summarize ${policy.file_name}')" title="Analyze Policy"><i data-lucide="message-square"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  
+  if (window.lucide) lucide.createIcons();
 }
 
 // Attach Event Listeners
@@ -184,13 +221,40 @@ function setupEventListeners() {
     sidebar.classList.remove("open");
   });
 
-  // Dummy Toast Buttons
-  document.querySelectorAll(".toast-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      const featureName = btn.getAttribute("data-feature") || "This feature";
-      showToast(`${featureName} is coming soon!`, "sparkles");
-    });
+  // Navigation View Switching
+  const navBtns = {
+    "btnNavNewChat": "welcomeScreen",
+    "btnNavSearch": "searchChatsScreen",
+    "btnNavGuide": "insuranceGuideScreen",
+    "btnNavPlatform": "platformGuideScreen",
+    "btnNavVault": "insuranceVaultScreen"
+  };
+
+  Object.keys(navBtns).forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        
+        // Handle "New Chat" special case when active chat exists
+        if (btnId === "btnNavNewChat" && hasMessages) {
+          resetChatWorkspace();
+          return;
+        }
+
+        // Update Active State
+        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+        btn.classList.add("active");
+
+        // Switch View
+        switchWorkspaceView(navBtns[btnId]);
+        
+        // Close sidebar on mobile
+        if (window.innerWidth <= 768) {
+          sidebar.classList.remove("open");
+        }
+      });
+    }
   });
 
   const viewArchivedBtn = document.querySelector(".view-archived");
@@ -280,16 +344,53 @@ function showToast(message, iconName = "bell") {
   }, 3000);
 }
 
+// Switch main workspace views
+function switchWorkspaceView(viewId) {
+  // Hide all view screens
+  document.querySelectorAll(".view-screen").forEach(screen => {
+    screen.classList.add("hidden");
+  });
+  
+  // Ensure welcome screen is hidden unless explicitly requested
+  if (viewId !== "welcomeScreen") {
+    welcomeScreen.classList.add("hidden");
+  } else if (!hasMessages) {
+    welcomeScreen.classList.remove("hidden");
+  }
+
+  // Show target view
+  const target = document.getElementById(viewId);
+  if (target) {
+    target.classList.remove("hidden");
+  }
+
+  // Toggle Chat Composer Footer
+  const footer = document.getElementById("workspaceFooter");
+  if (footer) {
+    if (viewId === "welcomeScreen" || viewId === "chatFeedWindow") {
+      footer.classList.remove("hidden");
+    } else {
+      footer.classList.add("hidden");
+    }
+  }
+  
+  if (window.lucide) lucide.createIcons();
+}
+
 // Reset workspace to welcome page
 function resetChatWorkspace() {
-  welcomeScreen.classList.remove("hidden");
-  chatFeedWindow.classList.add("hidden");
+  switchWorkspaceView("welcomeScreen");
   chatHistory.innerHTML = "";
   composerInput.value = "";
   chatSessionTitle.textContent = "New Chat";
   activeSessionName = "New Chat";
   hasMessages = false;
   clearStagedAttachment();
+  
+  // Update Nav
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  const btnNewChat = document.getElementById("btnNavNewChat");
+  if (btnNewChat) btnNewChat.classList.add("active");
   
   // Set clip icon back to paperclip
   composerClipIcon.setAttribute("data-lucide", "paperclip");
@@ -303,13 +404,28 @@ function triggerUpload() {
 }
 
 // Trigger welcome card action presets
-function triggerPreset(type) {
+function triggerPreset(type, customQuery = null) {
+  // Always switch to chat view
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  const btnNewChat = document.getElementById("btnNavNewChat");
+  if (btnNewChat) btnNewChat.classList.add("active");
+  switchWorkspaceView("chatFeedWindow");
+  
+  if (customQuery) {
+    composerInput.value = customQuery;
+    composerInput.focus();
+    submitQuery(customQuery);
+    return;
+  }
+
   if (type === "quotes") {
     composerInput.value = "What is the premium rate for Commercial Vehicle package policies?";
   } else if (type === "renew") {
     composerInput.value = "Explain the policy renewal grace period terms.";
   } else if (type === "vault") {
-    composerInput.value = "Show all available policy documents and files.";
+    const btnNavVault = document.getElementById("btnNavVault");
+    if (btnNavVault) btnNavVault.click();
+    return;
   } else if (type === "claim") {
     composerInput.value = "What documents are required to file a death benefit claim?";
   } else if (type === "ask") {
@@ -398,8 +514,7 @@ function addMessage(role, text, attachedFileName = null) {
   messageCounter++;
   const msgId = `msg-${messageCounter}`;
 
-  welcomeScreen.classList.add("hidden");
-  chatFeedWindow.classList.remove("hidden");
+  switchWorkspaceView("chatFeedWindow");
   hasMessages = true;
 
   const msgRow = document.createElement("div");

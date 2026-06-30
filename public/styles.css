@@ -1320,6 +1320,10 @@ body {
   to { transform: rotate(360deg); }
 }
 
+.collapse-sidebar-btn, .header-menu-btn {
+  display: none;
+}
+
 
 /* ==========================================
    Responsive Media Queries
@@ -1328,10 +1332,13 @@ body {
   .landing-page {
     grid-template-columns: 1fr;
     overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
   }
   .landing-left {
     padding: 30px;
-    height: 480px;
+    height: auto;
+    min-height: 480px;
   }
   .landing-right {
     padding: 40px 24px;
@@ -1343,7 +1350,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .app-dashboard {
+  .app-dashboard, .app-dashboard.inspector-open {
     grid-template-columns: 1fr;
   }
   
@@ -1390,10 +1397,6 @@ body {
     transform: translateX(0);
     box-shadow: -10px 0 30px rgba(0,0,0,0.15);
   }
-}
-
-.collapse-sidebar-btn, .header-menu-btn {
-  display: none;
 }
 
 /* Staged Attachment Preview Bar */

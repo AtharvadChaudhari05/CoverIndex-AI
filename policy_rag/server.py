@@ -154,37 +154,42 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
 
         if path == "/api/ask":
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                raw = self.rfile.read(length).decode("utf-8")
-                payload = json.loads(raw or "{}")
-                query = str(payload.get("query", "")).strip()
-                file_name = payload.get("file_name")
-                if file_name:
-                    file_name = str(file_name).strip()
-            except Exception as exc:  # pragma: no cover - defensive parsing
-                self.send_error(HTTPStatus.BAD_REQUEST, f"Invalid JSON payload: {exc}")
-                return
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8")
+                    payload = json.loads(raw or "{}")
+                    query = str(payload.get("query", "")).strip()
+                    file_name = payload.get("file_name")
+                    if file_name:
+                        file_name = str(file_name).strip()
+                except Exception as exc:
+                    self.send_error(HTTPStatus.BAD_REQUEST, f"Invalid JSON payload: {exc}")
+                    return
 
-            if not query:
-                self._send_json({"error": "Query is required"}, status=HTTPStatus.BAD_REQUEST)
-                return
+                if not query:
+                    self._send_json({"error": "Query is required"}, status=HTTPStatus.BAD_REQUEST)
+                    return
 
-            result = answer_query(ensure_index(), query, file_name=file_name)
+                result = answer_query(ensure_index(), query, file_name=file_name)
 
-            self._send_json(
-                {
-                    "answer": result.answer,
-                    "confidence": result.confidence,
-                    "route": {
-                        "insurer": result.route.insurer,
-                        "product_hint": result.route.product_hint,
-                        "intent": result.route.intent,
-                        "reasoning": result.route.reasoning,
-                    },
-                    "sources": result.sources,
-                    "trace": result.trace,
-                }
-            )
+                self._send_json(
+                    {
+                        "answer": result.answer,
+                        "confidence": result.confidence,
+                        "route": {
+                            "insurer": result.route.insurer,
+                            "product_hint": result.route.product_hint,
+                            "intent": result.route.intent,
+                            "reasoning": result.route.reasoning,
+                        },
+                        "sources": result.sources,
+                        "trace": result.trace,
+                    }
+                )
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                self._send_json({"error": f"An internal server error occurred while processing the query. Details: {e}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not found")

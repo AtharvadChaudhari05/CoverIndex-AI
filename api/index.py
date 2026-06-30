@@ -32,6 +32,16 @@ class handler(BaseHTTPRequestHandler):
     server_version = "CoverIndexAI/1.0"
 
     # ------------------------------------------------------------------
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """Handle CORS pre-flight requests from browsers."""
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Content-Length")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.end_headers()
+
+    # ------------------------------------------------------------------
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path

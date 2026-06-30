@@ -23,7 +23,6 @@ def default_source_candidates() -> list[Path]:
             PROJECT_ROOT / "Policy Documents",
             DATA_DIR / "policies",
             DATA_DIR / "policies.zip",
-            Path(r"C:\Users\ADMIN\OneDrive\Downloads\Policy Documents.zip"),
         ]
     )
     return candidates

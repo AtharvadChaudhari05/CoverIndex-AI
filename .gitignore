@@ -36,3 +36,9 @@ capstone_overleaf.pdf
 .idea/
 .vercel
 .env*
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example

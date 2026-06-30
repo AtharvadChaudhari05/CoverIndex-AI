@@ -354,9 +354,9 @@ body {
 }
 
 .action-card-landing:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(77, 55, 236, 0.2);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(77, 55, 236, 0.15);
+  border-color: rgba(77, 55, 236, 0.3);
 }
 
 .icon-box {
@@ -1347,6 +1347,9 @@ body {
   .mockup-card {
     max-width: 340px;
   }
+  .chat-composer input {
+    font-size: 16px; /* Prevents iOS Safari auto-zoom */
+  }
 }
 
 @media (max-width: 768px) {
@@ -1454,5 +1457,55 @@ body {
 .remove-attachment-btn i {
   width: 14px;
   height: 14px;
+}
+
+/* ==========================================
+   Toast Notification System
+   ========================================== */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast {
+  background-color: var(--text-main);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: toastSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  pointer-events: auto;
+}
+
+.toast i {
+  width: 16px;
+  height: 16px;
+  color: var(--primary-purple-light);
+}
+
+.toast.fade-out {
+  animation: toastFadeOut 0.3s ease forwards;
+}
+
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastFadeOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(10px) scale(0.95); }
 }
 

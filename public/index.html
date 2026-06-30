@@ -149,19 +149,19 @@
             <i data-lucide="plus" class="nav-icon"></i>
             <span>New Chat</span>
           </a>
-          <a href="#" class="nav-item">
+          <a href="#" class="nav-item toast-btn" data-feature="Search Chats">
             <i data-lucide="search" class="nav-icon"></i>
             <span>Search Chats</span>
           </a>
-          <a href="#" class="nav-item">
+          <a href="#" class="nav-item toast-btn" data-feature="Insurance Guide">
             <i data-lucide="shield" class="nav-icon"></i>
             <span>Insurance Guide</span>
           </a>
-          <a href="#" class="nav-item">
+          <a href="#" class="nav-item toast-btn" data-feature="Platform Guide">
             <i data-lucide="sparkles" class="nav-icon"></i>
             <span>Platform Guide</span>
           </a>
-          <a href="#" class="nav-item" id="btnVaultToggle">
+          <a href="#" class="nav-item toast-btn" id="btnVaultToggle" data-feature="Insurance Vault">
             <i data-lucide="folder-lock" class="nav-icon"></i>
             <span>Insurance Vault</span>
             <span class="nav-badge">NEW</span>
@@ -341,6 +341,9 @@
 
   <!-- Hidden inputs for file upload -->
   <input type="file" id="pdfFileInput" accept="application/pdf" style="display: none;" />
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
   <script src="/app.js"></script>

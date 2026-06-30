@@ -60,6 +60,9 @@ const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const sidebar = document.querySelector(".app-sidebar");
 const collapseSidebarBtn = document.getElementById("collapseSidebarBtn");
 
+// Toasts
+const toastContainer = document.getElementById("toastContainer");
+
 document.addEventListener("DOMContentLoaded", () => {
   // Initialize Lucide Icons
   if (window.lucide) {
@@ -181,6 +184,23 @@ function setupEventListeners() {
     sidebar.classList.remove("open");
   });
 
+  // Dummy Toast Buttons
+  document.querySelectorAll(".toast-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const featureName = btn.getAttribute("data-feature") || "This feature";
+      showToast(`${featureName} is coming soon!`, "sparkles");
+    });
+  });
+
+  const viewArchivedBtn = document.querySelector(".view-archived");
+  if (viewArchivedBtn) {
+    viewArchivedBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      showToast("Archived chats will be available in the next update.", "archive");
+    });
+  }
+
   // Upload actions
   attachmentBtn.addEventListener("click", () => {
     pdfFileInput.click();
@@ -235,6 +255,29 @@ function clearStagedAttachment() {
   stagedAttachment = null;
   attachmentPreviewBar.classList.add("hidden");
   pdfFileInput.value = "";
+}
+
+// Toast System
+function showToast(message, iconName = "bell") {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  
+  const icon = document.createElement("i");
+  icon.setAttribute("data-lucide", iconName);
+  
+  const text = document.createElement("span");
+  text.textContent = message;
+  
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  toastContainer.appendChild(toast);
+  
+  if (window.lucide) lucide.createIcons();
+  
+  setTimeout(() => {
+    toast.classList.add("fade-out");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // Reset workspace to welcome page

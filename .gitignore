@@ -31,5 +31,6 @@ capstone_overleaf.pdf
 .agents/
 .antigravity/
 .gemini/
-.vscode/
+.vscode/extensions.json
+.vscode/launch.json
 .idea/

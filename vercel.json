@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "outputDirectory": "web",
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "includeFiles": "cache/**|policy_rag/**"
+      "includeFiles": "{cache,policy_rag}/**"
     }
   },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.py" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.py" },
+    { "source": "/",           "destination": "/web/index.html" },
+    { "source": "/index.html", "destination": "/web/index.html" },
+    { "source": "/(.*)",       "destination": "/web/$1" }
   ]
 }

@@ -95,18 +95,17 @@ def save_cached_index(index: CachedIndex) -> None:
 
 def build_page_index(source: Path | None = None) -> tuple[list[PageRecord], str, Path | None]:
     source_path = source or resolve_source_path()
+    
+    # AGGRESSIVE CACHE LOADING: Always use cache if available in production to prevent OOM
+    cached = load_cached_index(None) # None signature means skip check
+    if cached is not None and len(cached.records) > 0:
+        print("[PolicyLens AI] Loaded aggressively from cache! Skipping file hashing.", flush=True)
+        return cached.records, cached.signature, source_path
+
     if source_path is None:
-        # Try to load pre-built index cache directly (crucial for serverless environments)
-        cached = load_cached_index(None)
-        if cached is not None:
-            return cached.records, cached.signature, None
         return [], "no-source", None
 
     signature = source_signature(source_path)
-    cached = load_cached_index(signature)
-    if cached is not None:
-        return cached.records, signature, source_path
-
     records: list[PageRecord] = []
     if source_path.is_dir():
         pdf_paths = sorted(path for path in source_path.rglob("*.pdf") if path.is_file())

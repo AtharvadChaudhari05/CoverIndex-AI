@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-WEB_DIR = PROJECT_ROOT / "web"
+WEB_DIR = PROJECT_ROOT
 CACHE_DIR = PROJECT_ROOT / "cache"
 DATA_DIR = PROJECT_ROOT / "data"
 

@@ -34,3 +34,5 @@ capstone_overleaf.pdf
 .vscode/extensions.json
 .vscode/launch.json
 .idea/
+.vercel
+.env*

@@ -2,6 +2,10 @@
    CoverIndex AI - Frontend Application Logic
    ========================================== */
 
+// Configure this to point to your Render backend URL once deployed.
+// For local development, leave it as empty string to use relative paths.
+const API_BASE_URL = "https://cover-index-api.onrender.com";
+
 // Typing animation items
 const typingSentences = [
   "renew a policy?",
@@ -126,7 +130,7 @@ function enterDashboard(mode = "") {
 // Check index status
 async function loadIndexStatus() {
   try {
-    const response = await fetch("/api/status");
+    const response = await fetch(`${API_BASE_URL}/api/status`);
     const payload = await response.json();
     if (payload.ready) {
       statusText.textContent = `${payload.page_count} pages indexed`;
@@ -139,7 +143,7 @@ async function loadIndexStatus() {
 // Load pre-indexed policies list
 async function loadIndexedPolicies() {
   try {
-    const response = await fetch("/api/policies");
+    const response = await fetch(`${API_BASE_URL}/api/policies`);
     const payload = await response.json();
     if (payload.policies) {
       indexedPolicies = payload.policies.map(p => p.file_name.toLowerCase());
@@ -287,7 +291,7 @@ async function uploadPdfFile(file) {
   formData.append("file", file);
 
   try {
-    const response = await fetch("/api/upload", {
+    const response = await fetch(`${API_BASE_URL}/api/upload`, {
       method: "POST",
       body: formData
     });
@@ -487,7 +491,7 @@ async function submitQuery(query) {
       formData.append("file", fileToUpload);
       
       try {
-        const uploadResponse = await fetch("/api/upload", {
+        const uploadResponse = await fetch(`${API_BASE_URL}/api/upload`, {
           method: "POST",
           body: formData
         });
@@ -527,7 +531,7 @@ async function submitQuery(query) {
       askFileName = activeSessionName.replace("Review: ", "");
     }
 
-    const response = await fetch("/api/ask", {
+    const response = await fetch(`${API_BASE_URL}/api/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, file_name: askFileName })

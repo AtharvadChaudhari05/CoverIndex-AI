@@ -1,5 +1,0 @@
-pypdf>=5.0.0
-python-dotenv
-groq
-google-genai
-google-generativeai

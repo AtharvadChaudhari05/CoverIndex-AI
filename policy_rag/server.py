@@ -218,14 +218,8 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000) -> None:
-    index = ensure_index()
-    print(
-        f"PolicyLens AI ready: {len(index.records)} pages across {index.document_count} documents"
-    )
-    if index.source_path:
-        print(f"Source: {index.source_path}")
-    else:
-        print("Source: none found - add POLICY_DOCS_SOURCE or data/policies")
+    print("PolicyLens AI server starting up...")
+    print("Index will be loaded lazily on the first request.")
 
     server = ThreadingHTTPServer((host, port), PolicyLensHandler)
     print(f"Open http://{host}:{port}")

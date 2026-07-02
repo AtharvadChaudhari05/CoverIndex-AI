@@ -50,19 +50,48 @@
   padding: 0;
 }
 
+html {
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-main);
   color: var(--text-main);
   background-color: var(--bg-app-canvas);
   height: 100vh;
   height: 100dvh; /* Dynamic viewport for iOS Safari */
-  width: 100vw;
-  overflow: hidden;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
   line-height: 1.5;
 }
 
 .hidden {
   display: none !important;
+}
+
+.mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 18, 31, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 90;
+}
+
+body.sidebar-open .mobile-backdrop,
+body.inspector-open .mobile-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (min-width: 769px) {
+  .mobile-backdrop {
+    display: none;
+  }
 }
 
 /* ==========================================
@@ -73,7 +102,7 @@ body {
   grid-template-columns: 1fr 1fr;
   height: 100vh;
   height: 100dvh;
-  width: 100vw;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -462,7 +491,7 @@ body {
   grid-template-columns: 280px 1fr 0px; /* Right drawer starts closed */
   height: 100vh;
   height: 100dvh;
-  width: 100vw;
+  width: 100%;
   overflow: hidden;
   transition: grid-template-columns 0.3s ease;
 }
@@ -713,6 +742,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   background-color: white;
+  min-width: 0;
 }
 
 .workspace-header {
@@ -788,6 +818,7 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .workspace-body::-webkit-scrollbar {
@@ -805,6 +836,7 @@ body {
   width: 100%;
   padding: 40px 24px;
   text-align: center;
+  min-width: 0;
 }
 
 .welcome-greeting {
@@ -886,6 +918,7 @@ body {
   max-width: 800px;
   margin: 0 auto;
   padding: 30px 24px;
+  min-width: 0;
 }
 
 .chat-history {
@@ -1011,6 +1044,7 @@ body {
 .workspace-footer {
   padding: 12px 24px 20px;
   background-color: white;
+  min-width: 0;
 }
 
 .chat-composer {
@@ -1107,6 +1141,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   z-index: 20;
+  min-width: 0;
 }
 
 .inspector-header {
@@ -1611,6 +1646,20 @@ body {
   }
 }
 
+@media (max-width: 1100px) {
+  .main-title {
+    font-size: 2.2rem;
+  }
+
+  .landing-right {
+    padding: 48px 28px;
+  }
+
+  .landing-left {
+    padding: 32px 28px;
+  }
+}
+
 @media (max-width: 768px) {
   .app-dashboard, .app-dashboard.inspector-open {
     grid-template-columns: 1fr;
@@ -1626,7 +1675,7 @@ body {
     top: 0;
     height: 100vh;
     height: 100dvh;
-    width: 260px;
+    width: min(86vw, 300px);
     z-index: 100;
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1655,7 +1704,7 @@ body {
     top: 0;
     height: 100vh;
     height: 100dvh;
-    width: 280px;
+    width: min(88vw, 340px);
     z-index: 100;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1664,6 +1713,257 @@ body {
   .app-inspector.open {
     transform: translateX(0);
     box-shadow: -10px 0 30px rgba(0,0,0,0.15);
+  }
+
+  .workspace-header {
+    height: auto;
+    min-height: 64px;
+    padding: 12px 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .header-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .index-badge,
+  .upload-badge-btn {
+    font-size: 0.72rem;
+    padding: 5px 10px;
+  }
+
+  .welcome-screen {
+    padding: 28px 16px 36px;
+  }
+
+  .welcome-greeting {
+    font-size: clamp(1.7rem, 7vw, 2.2rem);
+    margin-bottom: 28px;
+  }
+
+  .chat-feed-window {
+    padding: 22px 16px;
+  }
+
+  .workspace-footer {
+    padding: 12px 16px 16px;
+  }
+
+  .attachment-preview-bar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .attachment-preview-pill .attachment-file-name {
+    max-width: 180px;
+  }
+
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    transform: none;
+    bottom: 12px;
+  }
+
+  .toast {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-left,
+  .landing-right {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .mockup-card {
+    max-width: 100%;
+  }
+
+  .action-grid-2x2,
+  .welcome-grid-2x3,
+  .inspector-tabs,
+  .inspector-metrics-grid,
+  .guide-grid,
+  .feature-list,
+  .vault-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .vault-stats {
+    flex-direction: column;
+  }
+
+  .landing-right-footer {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header-left {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .active-chat-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .index-badge {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .upload-badge-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .workspace-body {
+    min-height: 0;
+  }
+
+  .chat-history {
+    gap: 18px;
+  }
+
+  .message-bubble-row,
+  .assistant-text-container,
+  .user-msg-container,
+  .welcome-card,
+  .guide-card,
+  .feature-item,
+  .vault-table-container {
+    min-width: 0;
+  }
+
+  .user-msg-container {
+    max-width: 100%;
+  }
+
+  .feature-item {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .vault-stat {
+    width: 100%;
+  }
+
+  .assistant-text-container {
+    font-size: 0.94rem;
+  }
+
+  .user-bubble {
+    font-size: 0.92rem;
+  }
+
+  .screen-header h2,
+  .welcome-greeting {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .landing-page,
+  .app-dashboard {
+    min-height: 100dvh;
+    height: auto;
+  }
+
+  .landing-left {
+    min-height: 420px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .landing-brand span,
+  .sidebar-brand span {
+    font-size: 1.05rem;
+  }
+
+  .main-title {
+    font-size: 1.95rem;
+  }
+
+  .main-subtitle {
+    font-size: 0.98rem;
+  }
+
+  .primary-ask-btn {
+    font-size: 1rem;
+    padding: 14px 16px;
+  }
+
+  .workspace-header {
+    padding: 10px 12px;
+  }
+
+  .workspace-body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .welcome-screen {
+    padding: 22px 12px 28px;
+  }
+
+  .welcome-greeting {
+    font-size: 1.55rem;
+  }
+
+  .welcome-card,
+  .guide-card,
+  .feature-item {
+    padding: 14px;
+  }
+
+  .chat-feed-window {
+    padding: 18px 12px 22px;
+  }
+
+  .workspace-footer {
+    padding: 10px 12px 14px;
+  }
+
+  .chat-composer {
+    padding: 6px 6px 6px 10px;
+  }
+
+  .chat-composer input {
+    font-size: 16px;
+    min-width: 0;
+  }
+
+  .composer-send-btn,
+  .composer-action-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .attachment-preview-pill .attachment-file-name {
+    max-width: 140px;
+  }
+
+  .vault-table-container {
+    overflow-x: auto;
   }
 }
 
@@ -1773,4 +2073,3 @@ body {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(10px) scale(0.95); }
 }
-

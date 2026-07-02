@@ -59,6 +59,7 @@ const inspectorTraceTimeline = document.getElementById("inspectorTraceTimeline")
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const sidebar = document.querySelector(".app-sidebar");
 const collapseSidebarBtn = document.getElementById("collapseSidebarBtn");
+const mobileBackdrop = document.getElementById("mobileBackdrop");
 
 // Toasts
 const toastContainer = document.getElementById("toastContainer");
@@ -74,6 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
   loadIndexStatus();
   loadIndexedPolicies();
+  syncMobileOverlays();
 });
 
 // Typing greeting text effect
@@ -205,21 +207,34 @@ function setupEventListeners() {
   btnToggleInspector.addEventListener("click", () => {
     appDashboard.classList.toggle("inspector-open");
     appInspector.classList.toggle("hidden");
+    syncMobileOverlays();
   });
 
   closeInspectorBtn.addEventListener("click", () => {
     appDashboard.classList.remove("inspector-open");
     appInspector.classList.add("hidden");
+    syncMobileOverlays();
   });
 
   // Mobile menu toggle
   mobileMenuBtn.addEventListener("click", () => {
     sidebar.classList.toggle("open");
+    syncMobileOverlays();
   });
   
   collapseSidebarBtn.addEventListener("click", () => {
     sidebar.classList.remove("open");
+    syncMobileOverlays();
   });
+
+  if (mobileBackdrop) {
+    mobileBackdrop.addEventListener("click", () => {
+      sidebar.classList.remove("open");
+      appDashboard.classList.remove("inspector-open");
+      appInspector.classList.add("hidden");
+      syncMobileOverlays();
+    });
+  }
 
   // Navigation View Switching
   const navBtns = {
@@ -252,6 +267,7 @@ function setupEventListeners() {
         // Close sidebar on mobile
         if (window.innerWidth <= 768) {
           sidebar.classList.remove("open");
+          syncMobileOverlays();
         }
       });
     }
@@ -319,6 +335,11 @@ function clearStagedAttachment() {
   stagedAttachment = null;
   attachmentPreviewBar.classList.add("hidden");
   pdfFileInput.value = "";
+}
+
+function syncMobileOverlays() {
+  document.body.classList.toggle("sidebar-open", sidebar.classList.contains("open"));
+  document.body.classList.toggle("inspector-open", appDashboard.classList.contains("inspector-open"));
 }
 
 // Toast System

@@ -34,6 +34,58 @@ const HTML = `<!DOCTYPE html>
       </div>
 
       <div class="mockup-card-container">
+        <div class="showcase-stack">
+          <div class="showcase-card">
+            <article class="showcase-slide active" data-showcase-slide data-title="Ask anything, anytime" data-subtitle="Get instant answers in plain English - no forms, no hold music.">
+              <div class="showcase-bubble user-bubble">Does my policy cover dental?</div>
+              <div class="showcase-bubble answer-bubble">
+                <p>Your HDFC Optima Secure plan covers dental only when it follows an accident. Routine cleanings and fillings aren't covered.</p>
+                <div class="source-line"><i data-lucide="file-text"></i> Source: Policy wording, p. 12</div>
+              </div>
+            </article>
+            <article class="showcase-slide" data-showcase-slide data-title="Your Insurance Vault" data-subtitle="All your policies in one place, always up to date.">
+              <div class="vault-preview">
+                <div class="vault-preview-head">
+                  <div class="vault-preview-badge"><i data-lucide="shield"></i></div>
+                  <div><h4>Your Insurance Vault</h4><p>3 policies</p></div>
+                </div>
+                <div class="vault-policy"><div class="vault-icon green"><i data-lucide="heart"></i></div><div class="vault-text"><strong>HDFC ERGO Health</strong><span>Valid until Mar 2027</span></div><span class="vault-tag active">Active</span></div>
+                <div class="vault-policy"><div class="vault-icon yellow"><i data-lucide="car"></i></div><div class="vault-text"><strong>ICICI Lombard Motor</strong><span>Expires in 12 days</span></div><span class="vault-tag renew">Renewal Due</span></div>
+                <div class="vault-policy"><div class="vault-icon cyan"><i data-lucide="users"></i></div><div class="vault-text"><strong>Star Family Health</strong><span>4 members - Valid Aug 2026</span></div><span class="vault-tag active">Active</span></div>
+              </div>
+            </article>
+            <article class="showcase-slide" data-showcase-slide data-title="Compare quotes side-by-side" data-subtitle="Find the best match for your needs in under a minute.">
+              <div class="quote-preview">
+                <div class="quote-row best"><div class="quote-brand">TATA</div><div class="quote-copy"><strong>TATA AIG</strong><span>Comprehensive - IDV ₹8.2 L</span></div><div class="quote-price"><strong>₹3,248</strong><span>/year</span></div><div class="quote-chip">BEST MATCH</div></div>
+                <div class="quote-row"><div class="quote-brand">RELI</div><div class="quote-copy"><strong>Reliance General</strong><span>Comprehensive - IDV ₹8.2 L</span></div><div class="quote-price"><strong>₹3,650</strong><span>/year</span></div></div>
+                <div class="quote-row"><div class="quote-brand">DIGIT</div><div class="quote-copy"><strong>Go Digit</strong><span>Comprehensive - IDV ₹8.2 L</span></div><div class="quote-price"><strong>₹3,890</strong><span>/year</span></div></div>
+              </div>
+            </article>
+            <article class="showcase-slide" data-showcase-slide data-title="Coverage Health Check" data-subtitle="We tell you if you're under-insured - and by how much.">
+              <div class="health-preview">
+                <div class="health-preview-head"><div class="health-icon"><i data-lucide="activity"></i></div><div><h4>Coverage Health Check</h4><p>Family of 4 - Mumbai</p></div><span class="health-tag warning">UNDER-INSURED</span></div>
+                <div class="health-meter-copy"><span>CURRENT COVER</span><strong>Recommended ₹25 L</strong></div>
+                <div class="health-meter"><div class="health-meter-fill"></div></div>
+                <div class="health-meter-stats"><strong>₹10 L</strong><span>of ₹25 L</span></div>
+                <ul class="health-list"><li class="yes"><i data-lucide="check-circle-2"></i> Room rent adequate</li><li class="no"><i data-lucide="x-circle"></i> Inflation protection missing</li><li class="warn"><i data-lucide="help-circle"></i> Co-pay on seniors</li></ul>
+              </div>
+            </article>
+            <article class="showcase-slide" data-showcase-slide data-title="Get an instant Policy X-ray" data-subtitle="See coverage, gaps and exclusions at a glance.">
+              <div class="policy-preview">
+                <div class="policy-preview-head"><div class="policy-icon"><i data-lucide="sparkles"></i></div><div><h4>Policy X-ray</h4><p>HDFC ERGO - Optima Secure</p></div></div>
+                <div class="policy-stats"><div class="policy-stat"><span>SUM INSURED</span><strong>₹10 L</strong></div><div class="policy-stat"><span>PREMIUM</span><strong>₹24,568<em>/yr</em></strong></div></div>
+                <ul class="policy-list"><li class="yes"><i data-lucide="check-circle-2"></i> Pre & Post Hospitalization</li><li class="yes"><i data-lucide="check-circle-2"></i> Day Care Treatments</li><li class="warn"><i data-lucide="help-circle"></i> Maternity (after 3 yrs)</li><li class="no"><i data-lucide="x-circle"></i> Routine Dental</li></ul>
+              </div>
+            </article>
+            <article class="showcase-slide" data-showcase-slide data-title="Upload any policy PDF" data-subtitle="Drop your insurance document - we'll read it in seconds.">
+              <div class="upload-preview">
+                <div class="upload-card"><div class="upload-file"><div class="upload-file-icon"><i data-lucide="file-text"></i></div><div class="upload-file-copy"><strong>HDFC_Health_Policy.pdf</strong><span>1.2 MB - Uploaded</span></div></div><div class="upload-question">Can you review my policy?</div></div>
+                <div class="upload-reading"><span class="reading-dots"><i></i><i></i><i></i></span>Reading your policy...</div>
+              </div>
+            </article>
+          </div>
+        </div>
+
         <div class="mockup-card">
           <div class="mockup-header">
             <div class="mockup-icon-wrapper">
@@ -76,17 +128,15 @@ const HTML = `<!DOCTYPE html>
       </div>
 
       <div class="landing-left-footer">
-        <h3>Get an instant Policy X-ray</h3>
-        <p>See coverage, gaps and exclusions at a glance.</p>
-        <div class="slider-dots">
-          <span class="dot active"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
+        <h3 id="showcaseTitle">Ask anything, anytime</h3>
+        <p id="showcaseSubtitle">Get instant answers in plain English - no forms, no hold music.</p>
+        <div class="slider-dots showcase-dots" id="showcaseDots">
+          <span class="dot active" data-showcase-dot="0"></span>
+          <span class="dot" data-showcase-dot="1"></span>
+          <span class="dot" data-showcase-dot="2"></span>
+          <span class="dot" data-showcase-dot="3"></span>
+          <span class="dot" data-showcase-dot="4"></span>
+          <span class="dot" data-showcase-dot="5"></span>
         </div>
         <div class="powered-by">Powered by CoverIndex</div>
       </div>
@@ -2570,6 +2620,475 @@ body.inspector-open .mobile-backdrop {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(10px) scale(0.95); }
 }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.55; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .showcase-stack {
+    width: min(100%, 420px);
+  }
+
+  .showcase-card {
+    min-height: 360px;
+    padding: 16px;
+  }
+
+  .showcase-slide {
+    inset: 16px;
+  }
+
+  .vault-policy,
+  .quote-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+
+  .quote-row.best .quote-chip {
+    left: 10px;
+  }
+
+  .policy-stats {
+    gap: 10px;
+  }
+}
+
+/* Showcase carousel added from live UI screenshots */
+.landing-left .mockup-card {
+  display: none;
+}
+
+.showcase-stack {
+  width: min(100%, 480px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.showcase-card {
+  position: relative;
+  min-height: 420px;
+  padding: 22px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(81, 74, 168, 0.42), rgba(56, 49, 132, 0.44)),
+    radial-gradient(circle at 50% 0%, rgba(116, 104, 255, 0.34), transparent 45%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 30px 70px rgba(4, 8, 34, 0.34);
+  overflow: hidden;
+}
+
+.showcase-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.showcase-slide {
+  position: absolute;
+  inset: 22px;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.showcase-slide.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.showcase-bubble,
+.vault-preview,
+.quote-preview,
+.health-preview,
+.policy-preview,
+.upload-preview {
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(98, 92, 181, 0.28);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 36px rgba(4, 8, 34, 0.14);
+}
+
+.showcase-bubble {
+  max-width: 78%;
+  padding: 16px 18px;
+}
+
+.user-bubble {
+  margin-left: auto;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(72, 77, 187, 0.98), rgba(82, 64, 177, 0.96));
+  color: #fff;
+  font-weight: 600;
+}
+
+.answer-bubble {
+  color: #eef2ff;
+  padding-bottom: 14px;
+}
+
+.answer-bubble p {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.source-line {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #5ce7ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+}
+
+.source-line i {
+  width: 15px;
+  height: 15px;
+}
+
+.vault-preview,
+.quote-preview,
+.health-preview,
+.policy-preview,
+.upload-preview {
+  padding: 18px;
+  color: #eff2ff;
+}
+
+.vault-preview-head,
+.health-preview-head,
+.policy-preview-head,
+.upload-file,
+.quote-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vault-preview-head h4,
+.health-preview-head h4,
+.policy-preview-head h4 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 1rem;
+}
+
+.vault-preview-head p,
+.health-preview-head p,
+.policy-preview-head p,
+.upload-file-copy span,
+.quote-copy span {
+  margin: 2px 0 0;
+  color: rgba(240, 244, 255, 0.68);
+  font-size: 0.82rem;
+}
+
+.vault-preview-badge,
+.health-icon,
+.policy-icon,
+.upload-file-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #cfe3ff;
+  background: linear-gradient(135deg, rgba(122, 108, 255, 0.72), rgba(66, 199, 255, 0.4));
+}
+
+.vault-preview-head {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.vault-policy,
+.quote-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  margin-top: 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vault-icon,
+.quote-brand {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.96);
+  color: #4338ca;
+}
+
+.vault-icon.green,
+.health-list .yes i,
+.policy-list .yes i {
+  color: #2dd4bf;
+}
+
+.vault-icon.yellow {
+  color: #fbbf24;
+}
+
+.vault-icon.cyan {
+  color: #34d399;
+}
+
+.vault-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-text strong,
+.quote-copy strong {
+  font-size: 0.96rem;
+}
+
+.vault-text span,
+.quote-copy span {
+  color: rgba(240, 244, 255, 0.65);
+  font-size: 0.82rem;
+}
+
+.vault-tag {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.vault-tag.active {
+  color: #32d6b5;
+  border: 1px solid rgba(50, 214, 181, 0.3);
+  background: rgba(50, 214, 181, 0.14);
+}
+
+.vault-tag.renew,
+.health-tag.warning,
+.quote-chip {
+  color: #f7c84b;
+  border: 1px solid rgba(247, 200, 75, 0.28);
+  background: rgba(247, 200, 75, 0.14);
+}
+
+.quote-row.best {
+  border-color: rgba(47, 211, 166, 0.85);
+  box-shadow: 0 0 0 1px rgba(47, 211, 166, 0.16);
+}
+
+.quote-row.best .quote-copy strong,
+.quote-row.best .quote-price strong {
+  color: #fff;
+}
+
+.quote-row.best .quote-chip {
+  position: absolute;
+  left: 12px;
+  top: -11px;
+}
+
+.quote-price {
+  text-align: right;
+}
+
+.quote-price strong {
+  display: block;
+  font-size: 1.02rem;
+}
+
+.quote-price span {
+  color: rgba(240, 244, 255, 0.65);
+  font-size: 0.8rem;
+}
+
+.health-preview-head {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.health-preview-head > div:nth-child(2) {
+  margin-right: auto;
+}
+
+.health-meter-copy {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: rgba(240, 244, 255, 0.7);
+}
+
+.health-meter {
+  margin-top: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.health-meter-fill {
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff7f7f, #ffbf2f);
+}
+
+.health-meter-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.health-meter-stats strong,
+.policy-stat strong {
+  font-size: 1.12rem;
+}
+
+.health-list,
+.policy-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.health-list li,
+.policy-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.health-list .no,
+.policy-list .no {
+  color: #f78a8a;
+}
+
+.health-list .warn,
+.policy-list .warn {
+  color: #f7c84b;
+}
+
+.policy-preview-head {
+  margin-bottom: 14px;
+}
+
+.policy-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.policy-stat {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.policy-stat span {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(240, 244, 255, 0.62);
+  margin-bottom: 4px;
+}
+
+.policy-stat strong em {
+  font-style: normal;
+  color: rgba(240, 244, 255, 0.68);
+  font-size: 0.78rem;
+  margin-left: 2px;
+}
+
+.upload-preview {
+  display: grid;
+  gap: 16px;
+}
+
+.upload-card {
+  width: min(100%, 290px);
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(94, 78, 182, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.upload-file-copy strong {
+  display: block;
+  font-size: 0.93rem;
+}
+
+.upload-question {
+  margin-top: 14px;
+  font-size: 1rem;
+}
+
+.upload-reading {
+  width: 180px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(101, 136, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reading-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #4dd6e9;
+  animation: pulse 1.2s infinite ease-in-out;
+}
+
+.reading-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.reading-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.showcase-dots .dot {
+  transition: all 0.2s ease;
+}
+
+.showcase-dots .dot.active {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
 `;
 const APP_JS = `/* ==========================================
    CoverIndex AI - Frontend Application Logic
@@ -2598,6 +3117,8 @@ let hasMessages = false;
 let uploadedFiles = [];
 let stagedAttachment = null;
 let indexedPolicies = [];
+let showcaseIndex = 0;
+let showcaseTimer = null;
 
 // DOM Elements
 const landingPage = document.getElementById("landingPage");
@@ -2645,6 +3166,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Start typing greeting animation
   typeGreeting();
+  initLandingShowcase();
   setupEventListeners();
   loadIndexStatus();
   loadIndexedPolicies();
@@ -2678,6 +3200,52 @@ function typeGreeting() {
   }
 
   setTimeout(typeGreeting, typingSpeed);
+}
+
+function initLandingShowcase() {
+  const slides = Array.from(document.querySelectorAll("[data-showcase-slide]"));
+  const dots = Array.from(document.querySelectorAll("[data-showcase-dot]"));
+  const title = document.getElementById("showcaseTitle");
+  const subtitle = document.getElementById("showcaseSubtitle");
+
+  if (!slides.length) return;
+
+  const activate = (nextIndex) => {
+    showcaseIndex = (nextIndex + slides.length) % slides.length;
+    slides.forEach((slide, index) => {
+      slide.classList.toggle("active", index === showcaseIndex);
+    });
+    dots.forEach((dot, index) => {
+      dot.classList.toggle("active", index === showcaseIndex);
+    });
+
+    const activeSlide = slides[showcaseIndex];
+    if (title && activeSlide.dataset.title) {
+      title.textContent = activeSlide.dataset.title;
+    }
+    if (subtitle && activeSlide.dataset.subtitle) {
+      subtitle.textContent = activeSlide.dataset.subtitle;
+    }
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      activate(Number(dot.dataset.showcaseDot || 0));
+      restartShowcaseTimer(activate);
+    });
+  });
+
+  activate(0);
+  restartShowcaseTimer(activate);
+}
+
+function restartShowcaseTimer(activate) {
+  if (showcaseTimer) {
+    clearInterval(showcaseTimer);
+  }
+  showcaseTimer = setInterval(() => {
+    activate(showcaseIndex + 1);
+  }, 3800);
 }
 
 // Navigation between Landing and Dashboard

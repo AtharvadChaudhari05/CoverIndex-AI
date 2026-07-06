@@ -25,6 +25,8 @@ let hasMessages = false;
 let uploadedFiles = [];
 let stagedAttachment = null;
 let indexedPolicies = [];
+let showcaseIndex = 0;
+let showcaseTimer = null;
 
 // DOM Elements
 const landingPage = document.getElementById("landingPage");
@@ -72,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Start typing greeting animation
   typeGreeting();
+  initLandingShowcase();
   setupEventListeners();
   loadIndexStatus();
   loadIndexedPolicies();
@@ -105,6 +108,52 @@ function typeGreeting() {
   }
 
   setTimeout(typeGreeting, typingSpeed);
+}
+
+function initLandingShowcase() {
+  const slides = Array.from(document.querySelectorAll("[data-showcase-slide]"));
+  const dots = Array.from(document.querySelectorAll("[data-showcase-dot]"));
+  const title = document.getElementById("showcaseTitle");
+  const subtitle = document.getElementById("showcaseSubtitle");
+
+  if (!slides.length) return;
+
+  const activate = (nextIndex) => {
+    showcaseIndex = (nextIndex + slides.length) % slides.length;
+    slides.forEach((slide, index) => {
+      slide.classList.toggle("active", index === showcaseIndex);
+    });
+    dots.forEach((dot, index) => {
+      dot.classList.toggle("active", index === showcaseIndex);
+    });
+
+    const activeSlide = slides[showcaseIndex];
+    if (title && activeSlide.dataset.title) {
+      title.textContent = activeSlide.dataset.title;
+    }
+    if (subtitle && activeSlide.dataset.subtitle) {
+      subtitle.textContent = activeSlide.dataset.subtitle;
+    }
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      activate(Number(dot.dataset.showcaseDot || 0));
+      restartShowcaseTimer(activate);
+    });
+  });
+
+  activate(0);
+  restartShowcaseTimer(activate);
+}
+
+function restartShowcaseTimer(activate) {
+  if (showcaseTimer) {
+    clearInterval(showcaseTimer);
+  }
+  showcaseTimer = setInterval(() => {
+    activate(showcaseIndex + 1);
+  }, 3800);
 }
 
 // Navigation between Landing and Dashboard

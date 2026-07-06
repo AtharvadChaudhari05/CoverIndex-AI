@@ -1,6 +1,6 @@
 # CoverIndex AI
 
-PolicyLens AI is a vectorless, page-indexed RAG system for insurance policy queries.
+CoverIndex  AI is a vectorless, page-indexed RAG system for insurance policy queries.
 It is designed to answer questions from the provided policy PDFs with citations and a
 strict "answer only from evidence" flow.
 

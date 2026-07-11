@@ -79,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
   typeGreeting();
   initLandingShowcase();
   initFeatureShowcase();
+  initFeatureReveal();
   setupEventListeners();
   initVoiceLanguagePreference();
   loadIndexStatus();
@@ -202,6 +203,30 @@ function restartFeatureShowcaseTimer(activate) {
   featureShowcaseTimer = setInterval(() => {
     activate(featureShowcaseIndex + 1);
   }, 4200);
+}
+
+function initFeatureReveal() {
+  const showcase = document.querySelector(".feature-showcase");
+  if (!showcase) return;
+
+  if (!("IntersectionObserver" in window)) {
+    showcase.dataset.visible = "true";
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        showcase.dataset.visible = "true";
+        observer.disconnect();
+      }
+    });
+  }, {
+    threshold: 0.22,
+    rootMargin: "0px 0px -40px 0px",
+  });
+
+  observer.observe(showcase);
 }
 
 function initVoiceLanguagePreference() {

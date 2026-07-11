@@ -36,3 +36,6 @@ capstone_overleaf.pdf
 .idea/
 .vercel
 .env*
+
+# Local deploy helpers
+tmp/

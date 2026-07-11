@@ -1,6 +1,6 @@
 # CoverIndex AI
 
-CoverIndex  AI is a vectorless, page-indexed RAG system for insurance policy queries.
+CoverIndex AI is a vectorless, page-indexed RAG system for insurance policy queries.
 It is designed to answer questions from the provided policy PDFs with citations and a
 strict "answer only from evidence" flow.
 
@@ -24,7 +24,8 @@ strict "answer only from evidence" flow.
 ## Folder structure
 
 - `policy_rag/` - ingestion, page indexing, routing, and answer generation
-- `web/` - frontend HTML, CSS, and browser logic
+- `public/` - frontend HTML, CSS, and browser logic
+- `worker.js` - Cloudflare Worker that serves the latest `public/` frontend and proxies API calls
 - `cache/` - generated index cache
 
 ## Running locally
@@ -42,6 +43,22 @@ strict "answer only from evidence" flow.
    ```
 
 3. Open `http://localhost:8000`.
+
+The local server serves the UI directly from `public/`, so the latest frontend in GitHub
+is the same frontend you will see when running `python app.py`.
+
+## Cloudflare deployment
+
+The Cloudflare Worker in `worker.js` uses the same frontend source of truth:
+
+- static UI comes from `public/index.html`, `public/styles.css`, and `public/app.js`
+- API requests under `/api/*` are proxied to `https://coverindex-ai.onrender.com`
+
+That means:
+
+- local runs use `public/`
+- GitHub contains the latest working UI in `public/`
+- Cloudflare deploys can use `worker.js` without relying on an outdated bundled copy
 
 ## Document source
 

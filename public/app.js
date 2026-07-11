@@ -27,6 +27,8 @@ let stagedAttachment = null;
 let indexedPolicies = [];
 let showcaseIndex = 0;
 let showcaseTimer = null;
+let featureShowcaseIndex = 0;
+let featureShowcaseTimer = null;
 
 // DOM Elements
 const landingPage = document.getElementById("landingPage");
@@ -75,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Start typing greeting animation
   typeGreeting();
   initLandingShowcase();
+  initFeatureShowcase();
   setupEventListeners();
   loadIndexStatus();
   loadIndexedPolicies();
@@ -154,6 +157,49 @@ function restartShowcaseTimer(activate) {
   showcaseTimer = setInterval(() => {
     activate(showcaseIndex + 1);
   }, 3800);
+}
+
+function initFeatureShowcase() {
+  const cards = Array.from(document.querySelectorAll("[data-feature-card]"));
+  const dots = Array.from(document.querySelectorAll("[data-feature-dot]"));
+
+  if (!cards.length) return;
+
+  const activate = (nextIndex) => {
+    featureShowcaseIndex = (nextIndex + cards.length) % cards.length;
+    cards.forEach((card, index) => {
+      card.classList.toggle("active", index === featureShowcaseIndex);
+    });
+    dots.forEach((dot, index) => {
+      dot.classList.toggle("active", index === featureShowcaseIndex);
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      activate(Number(dot.dataset.featureDot || 0));
+      restartFeatureShowcaseTimer(activate);
+    });
+  });
+
+  cards.forEach((card) => {
+    card.addEventListener("mouseenter", () => {
+      activate(Number(card.dataset.featureCard || 0));
+      restartFeatureShowcaseTimer(activate);
+    });
+  });
+
+  activate(0);
+  restartFeatureShowcaseTimer(activate);
+}
+
+function restartFeatureShowcaseTimer(activate) {
+  if (featureShowcaseTimer) {
+    clearInterval(featureShowcaseTimer);
+  }
+  featureShowcaseTimer = setInterval(() => {
+    activate(featureShowcaseIndex + 1);
+  }, 4200);
 }
 
 // Navigation between Landing and Dashboard
@@ -537,26 +583,93 @@ function activateVoiceCapture() {
     return;
   }
 
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-IN";
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
+  const previousRecognition = window.__coverIndexVoiceRecognition;
+  if (previousRecognition) {
+    try {
+      previousRecognition.abort();
+    } catch (error) {
+      console.warn("Failed to stop a previous voice session:", error);
+    }
+  }
 
-  showToast("Listening for your insurance question.", "mic");
+  const recognition = new SpeechRecognition();
+  const preferredLang = navigator.language || "en-IN";
+  recognition.lang = preferredLang;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  window.__coverIndexVoiceRecognition = recognition;
+
+  showToast("Listening for one complete insurance question.", "mic");
+
+  let finalTranscript = "";
+  let interimTranscript = "";
+  let submitPending = false;
+  let settleTimer = null;
 
   recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    composerInput.value = transcript;
+    interimTranscript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      const transcript = result[0].transcript.trim();
+      if (result.isFinal) {
+        finalTranscript = `${finalTranscript} ${transcript}`.trim();
+      } else {
+        interimTranscript = transcript;
+      }
+    }
+
+    const transcriptPreview = [finalTranscript, interimTranscript].filter(Boolean).join(" ").trim();
+    composerInput.value = transcriptPreview;
     composerInput.focus();
-    showToast("Voice captured. Sending to the advisor.", "languages");
+
+    if (settleTimer) {
+      clearTimeout(settleTimer);
+    }
+    settleTimer = setTimeout(() => {
+      try {
+        recognition.stop();
+      } catch (error) {
+        console.warn("Voice recognition stop failed:", error);
+      }
+    }, 1400);
+  };
+
+  recognition.onend = () => {
+    if (settleTimer) {
+      clearTimeout(settleTimer);
+    }
+    window.__coverIndexVoiceRecognition = null;
+
+    if (submitPending) return;
+
+    const transcript = `${finalTranscript} ${interimTranscript}`.replace(/\s+/g, " ").trim();
+    if (!transcript) {
+      showToast("No speech detected. Try again.", "mic-off");
+      return;
+    }
+
+    submitPending = true;
+    composerInput.value = transcript;
+    showToast("Voice captured as one complete query.", "languages");
     submitQuery(transcript);
   };
 
   recognition.onerror = () => {
+    if (settleTimer) {
+      clearTimeout(settleTimer);
+    }
+    window.__coverIndexVoiceRecognition = null;
     showToast("Voice capture stopped. Try again.", "mic-off");
   };
 
-  recognition.start();
+  try {
+    recognition.start();
+  } catch (error) {
+    window.__coverIndexVoiceRecognition = null;
+    showToast("Voice input could not start. Please try again.", "mic-off");
+  }
 }
 
 // Upload PDF to backend

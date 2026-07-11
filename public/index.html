@@ -170,28 +170,60 @@
           </div>
         </div>
 
-        <section class="roadmap-preview">
-          <div class="roadmap-preview-header">
-            <span class="section-kicker">Feature roadmap</span>
-            <h2>Three phases. Seven features. One product users can trust.</h2>
-            <p>We are turning the original assistant into an explainable, real-time insurance workspace.</p>
+        <section class="feature-showcase" aria-labelledby="featureShowcaseTitle">
+          <div class="feature-showcase-header">
+            <span class="section-kicker">Live features</span>
+            <h2 id="featureShowcaseTitle">Three live features users can try right away.</h2>
+            <p>Instead of a static roadmap box, this section cycles through the most useful insurance workflows in a modern animated layout.</p>
           </div>
-          <div class="roadmap-preview-grid">
-            <button class="roadmap-chip phase-one" type="button" onclick="triggerPreset('advisor')">
-              <span class="roadmap-chip-label">Phase 1</span>
-              <strong>Explainable AI Advisor</strong>
-              <small>Policy Health Score + Insurance Vault</small>
+          <div class="feature-showcase-stage" id="featureShowcaseStage">
+            <button class="feature-showcase-card feature-one active" type="button" data-feature-card="0" onclick="triggerPreset('advisor')">
+              <span class="feature-card-glow"></span>
+              <div class="feature-card-head">
+                <span class="feature-pill">Phase 1</span>
+                <div class="feature-live-dot"></div>
+              </div>
+              <h3>Explainable AI Advisor</h3>
+              <p>Get policy answers with evidence, exclusions, and a clear next step.</p>
+              <div class="feature-chip-row">
+                <span>Policy Health Score</span>
+                <span>Insurance Vault</span>
+              </div>
             </button>
-            <button class="roadmap-chip phase-two" type="button" onclick="triggerPreset('claim')">
-              <span class="roadmap-chip-label">Phase 2</span>
-              <strong>Claim Assistant</strong>
-              <small>Real-time claims + renewal optimizer</small>
+            <button class="feature-showcase-card feature-two" type="button" data-feature-card="1" onclick="triggerPreset('claim')">
+              <span class="feature-card-glow"></span>
+              <div class="feature-card-head">
+                <span class="feature-pill">Phase 2</span>
+                <div class="feature-live-dot"></div>
+              </div>
+              <h3>Real-Time Claim Assistant</h3>
+              <p>Track documents, missing steps, and renewal savings without leaving the chat.</p>
+              <div class="feature-chip-row">
+                <span>Claim Checklist</span>
+                <span>Renewal Optimizer</span>
+              </div>
             </button>
-            <button class="roadmap-chip phase-three" type="button" onclick="triggerPreset('voice')">
-              <span class="roadmap-chip-label">Phase 3</span>
-              <strong>Voice + Multilingual</strong>
-              <small>Human handoff when the case needs it</small>
+            <button class="feature-showcase-card feature-three" type="button" data-feature-card="2" onclick="triggerPreset('voice')">
+              <span class="feature-card-glow"></span>
+              <div class="feature-card-head">
+                <span class="feature-pill">Phase 3</span>
+                <div class="feature-live-dot"></div>
+              </div>
+              <h3>Voice + Multilingual Assistant</h3>
+              <p>Speak naturally in one full sentence and hand off complex cases when needed.</p>
+              <div class="feature-chip-row">
+                <span>Voice Capture</span>
+                <span>Human Handoff</span>
+              </div>
             </button>
+          </div>
+          <div class="feature-showcase-footer">
+            <span class="feature-showcase-status"><i data-lucide="sparkles"></i> Auto-rotating live preview</span>
+            <div class="feature-showcase-dots" id="featureShowcaseDots">
+              <button class="dot active" type="button" data-feature-dot="0" aria-label="Show explainable AI advisor"></button>
+              <button class="dot" type="button" data-feature-dot="1" aria-label="Show claim assistant"></button>
+              <button class="dot" type="button" data-feature-dot="2" aria-label="Show voice assistant"></button>
+            </div>
           </div>
         </section>
 

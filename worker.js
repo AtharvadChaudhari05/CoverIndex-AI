@@ -175,6 +175,31 @@ const HTML = `<!DOCTYPE html>
           </div>
         </div>
 
+        <section class="roadmap-preview">
+          <div class="roadmap-preview-header">
+            <span class="section-kicker">Feature roadmap</span>
+            <h2>Three phases. Seven features. One product users can trust.</h2>
+            <p>We are turning the original assistant into an explainable, real-time insurance workspace.</p>
+          </div>
+          <div class="roadmap-preview-grid">
+            <button class="roadmap-chip phase-one" type="button" onclick="triggerPreset('advisor')">
+              <span class="roadmap-chip-label">Phase 1</span>
+              <strong>Explainable AI Advisor</strong>
+              <small>Policy Health Score + Insurance Vault</small>
+            </button>
+            <button class="roadmap-chip phase-two" type="button" onclick="triggerPreset('claim')">
+              <span class="roadmap-chip-label">Phase 2</span>
+              <strong>Claim Assistant</strong>
+              <small>Real-time claims + renewal optimizer</small>
+            </button>
+            <button class="roadmap-chip phase-three" type="button" onclick="triggerPreset('voice')">
+              <span class="roadmap-chip-label">Phase 3</span>
+              <strong>Voice + Multilingual</strong>
+              <small>Human handoff when the case needs it</small>
+            </button>
+          </div>
+        </section>
+
         <button class="primary-ask-btn" onclick="enterDashboard()">
           <i data-lucide="message-square"></i> Ask CoverIndex AI
         </button>
@@ -220,6 +245,10 @@ const HTML = `<!DOCTYPE html>
           <a href="#" class="nav-item" id="btnNavPlatform">
             <i data-lucide="sparkles" class="nav-icon"></i>
             <span>Platform Guide</span>
+          </a>
+          <a href="#" class="nav-item" id="btnNavRoadmap">
+            <i data-lucide="map-pinned" class="nav-icon"></i>
+            <span>Product Roadmap</span>
           </a>
           <a href="#" class="nav-item" id="btnNavVault">
             <i data-lucide="folder-lock" class="nav-icon"></i>
@@ -287,11 +316,11 @@ const HTML = `<!DOCTYPE html>
         <div class="welcome-screen" id="welcomeScreen">
           <h2 class="welcome-greeting">Looking to <span class="typing-text" id="typingTarget">renew a policy?</span></h2>
           
-          <div class="welcome-grid-2x3">
-            <div class="welcome-card" onclick="triggerPreset('quotes')">
-              <div class="welcome-card-icon blue"><i data-lucide="car"></i></div>
-              <div>
-                <h4>Get Quotes</h4>
+        <div class="welcome-grid-2x3">
+          <div class="welcome-card" onclick="triggerPreset('quotes')">
+            <div class="welcome-card-icon blue"><i data-lucide="car"></i></div>
+            <div>
+              <h4>Get Quotes</h4>
                 <p>Enter vehicle number</p>
               </div>
             </div>
@@ -319,15 +348,29 @@ const HTML = `<!DOCTYPE html>
             <div class="welcome-card" onclick="triggerPreset('claim')">
               <div class="welcome-card-icon cyan"><i data-lucide="heart-handshake"></i></div>
               <div>
-                <h4>Raise a Claim</h4>
-                <p>File & track claims</p>
+                <h4>Claim Assistant</h4>
+                <p>File & track claims in real time</p>
               </div>
             </div>
             <div class="welcome-card" onclick="triggerPreset('ask')">
               <div class="welcome-card-icon pink"><i data-lucide="help-circle"></i></div>
               <div>
-                <h4>Ask Anything</h4>
-                <p>IDV, addons, NCB & more</p>
+                <h4>Explainable AI Advisor</h4>
+                <p>IDV, add-ons, citations & more</p>
+              </div>
+            </div>
+            <div class="welcome-card" onclick="triggerPreset('health')">
+              <div class="welcome-card-icon lime"><i data-lucide="activity"></i></div>
+              <div>
+                <h4>Policy Health Score</h4>
+                <p>See coverage gaps instantly</p>
+              </div>
+            </div>
+            <div class="welcome-card" onclick="triggerPreset('voice')">
+              <div class="welcome-card-icon teal"><i data-lucide="languages"></i></div>
+              <div>
+                <h4>Voice + Multilingual</h4>
+                <p>Speak naturally in your language</p>
               </div>
             </div>
           </div>
@@ -392,13 +435,13 @@ const HTML = `<!DOCTYPE html>
             <h2>Platform Guide</h2>
             <p>Master CoverIndex AI features and workflows.</p>
           </div>
-          <div class="feature-list">
-            <div class="feature-item">
-              <div class="feature-icon"><i data-lucide="file-text"></i></div>
-              <div class="feature-text">
-                <h4>1. Upload Policy PDFs</h4>
-                <p>Click the attachment clip to upload any policy document. The AI will instantly read and index it for your questions.</p>
-              </div>
+        <div class="feature-list">
+          <div class="feature-item">
+            <div class="feature-icon"><i data-lucide="file-text"></i></div>
+            <div class="feature-text">
+              <h4>1. Upload Policy PDFs</h4>
+              <p>Click the attachment clip to upload any policy document. The AI will instantly read and index it for your questions.</p>
+            </div>
             </div>
             <div class="feature-item">
               <div class="feature-icon"><i data-lucide="layout-sidebar-open"></i></div>
@@ -407,13 +450,72 @@ const HTML = `<!DOCTYPE html>
                 <p>Click the sidebar icon on the top right to open the Inspection Console. See exactly which pages of the PDF the AI used.</p>
               </div>
             </div>
-            <div class="feature-item">
-              <div class="feature-icon"><i data-lucide="cpu"></i></div>
-              <div class="feature-text">
-                <h4>3. View Routing Trace</h4>
-                <p>The AI automatically routes questions to specialized agents (e.g. HDFC Ergo vs SBI General). Check the Trace tab to see how it thinks.</p>
-              </div>
+          <div class="feature-item">
+            <div class="feature-icon"><i data-lucide="cpu"></i></div>
+            <div class="feature-text">
+              <h4>3. View Routing Trace</h4>
+              <p>The AI automatically routes questions to specialized agents (e.g. HDFC Ergo vs SBI General). Check the Trace tab to see how it thinks.</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+        <!-- Product Roadmap Screen (hidden initially) -->
+        <div class="view-screen hidden" id="roadmapScreen">
+          <div class="screen-header">
+            <div class="screen-icon"><i data-lucide="map-pinned"></i></div>
+            <h2>Product Roadmap</h2>
+            <p>Seven realistic features grouped into three launch phases.</p>
+          </div>
+          <div class="roadmap-grid">
+            <section class="phase-card phase-one">
+              <div class="phase-card-head">
+                <span class="phase-badge">Phase 1</span>
+                <h3>Explainable AI Advisor</h3>
+                <p>Answer with reasons, evidence, and clear next steps.</p>
+              </div>
+              <div class="phase-feature-list">
+                <span>Policy Health Score</span>
+                <span>Insurance Vault</span>
+                <span>Explainable policy answers</span>
+              </div>
+              <div class="phase-actions">
+                <button class="guide-btn" onclick="triggerPreset('advisor')">Try Advisor</button>
+                <button class="guide-btn secondary" onclick="triggerPreset('health')">Open Health Score</button>
+              </div>
+            </section>
+            <section class="phase-card phase-two">
+              <div class="phase-card-head">
+                <span class="phase-badge">Phase 2</span>
+                <h3>Real-Time Claim Assistant</h3>
+                <p>Track claims, missing documents, and renewal savings live.</p>
+              </div>
+              <div class="phase-feature-list">
+                <span>Real-Time Claim Assistant</span>
+                <span>Live Renewal Optimizer</span>
+                <span>Smart document checklist</span>
+              </div>
+              <div class="phase-actions">
+                <button class="guide-btn" onclick="triggerPreset('claim')">Start Claim Flow</button>
+                <button class="guide-btn secondary" onclick="triggerPreset('renew')">Optimize Renewal</button>
+              </div>
+            </section>
+            <section class="phase-card phase-three">
+              <div class="phase-card-head">
+                <span class="phase-badge">Phase 3</span>
+                <h3>Voice + Multilingual Assistant</h3>
+                <p>Let users speak naturally and hand off complex cases to people.</p>
+              </div>
+              <div class="phase-feature-list">
+                <span>Voice assistant</span>
+                <span>Multilingual replies</span>
+                <span>Human handoff</span>
+              </div>
+              <div class="phase-actions">
+                <button class="guide-btn" onclick="triggerPreset('voice')">Open Voice Mode</button>
+                <button class="guide-btn secondary" onclick="triggerPreset('handoff')">Request Handoff</button>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -911,6 +1013,100 @@ body.inspector-open .mobile-backdrop {
   margin-bottom: 32px;
 }
 
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--primary-purple);
+  margin-bottom: 10px;
+}
+
+.roadmap-preview {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(77, 55, 236, 0.03), rgba(77, 55, 236, 0.01));
+  margin-bottom: 26px;
+}
+
+.roadmap-preview-header {
+  margin-bottom: 14px;
+}
+
+.roadmap-preview-header h2 {
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  margin-bottom: 6px;
+  color: var(--text-main);
+}
+
+.roadmap-preview-header p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.roadmap-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.roadmap-chip {
+  appearance: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: left;
+  background: white;
+  font: inherit;
+  width: 100%;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.roadmap-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(77, 55, 236, 0.18);
+}
+
+.roadmap-chip strong {
+  color: var(--text-main);
+  font-size: 0.98rem;
+}
+
+.roadmap-chip small {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.roadmap-chip-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--primary-purple);
+}
+
+.phase-one {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.08), rgba(255, 255, 255, 1));
+}
+
+.phase-two {
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.08), rgba(255, 255, 255, 1));
+}
+
+.phase-three {
+  background: linear-gradient(180deg, rgba(6, 182, 212, 0.08), rgba(255, 255, 255, 1));
+}
+
 .action-grid-2x2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1401,7 +1597,7 @@ body.inspector-open .mobile-backdrop {
 
 .welcome-grid-2x3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 
@@ -1440,6 +1636,8 @@ body.inspector-open .mobile-backdrop {
 .welcome-card-icon.yellow { background-color: rgba(234, 179, 8, 0.08); color: var(--accent-yellow); }
 .welcome-card-icon.cyan { background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); }
 .welcome-card-icon.pink { background-color: rgba(236, 72, 153, 0.08); color: var(--accent-pink); }
+.welcome-card-icon.lime { background-color: rgba(132, 204, 22, 0.1); color: #65a30d; }
+.welcome-card-icon.teal { background-color: rgba(20, 184, 166, 0.1); color: #0f766e; }
 
 .welcome-card-icon i {
   width: 20px;
@@ -2064,6 +2262,16 @@ body.inspector-open .mobile-backdrop {
   background-color: var(--primary-purple-light);
 }
 
+.guide-btn.secondary {
+  background-color: #f8fafc;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+.guide-btn.secondary:hover {
+  background-color: #eef2ff;
+}
+
 /* Platform Features */
 .feature-list {
   display: flex;
@@ -2096,6 +2304,72 @@ body.inspector-open .mobile-backdrop {
 .feature-text p {
   color: var(--text-muted);
   font-size: 0.95rem;
+}
+
+/* Roadmap screen */
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.phase-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.phase-card-head h3 {
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+
+.phase-card-head p {
+  color: var(--text-muted);
+  font-size: 0.93rem;
+}
+
+.phase-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: white;
+  background: var(--primary-purple);
+  margin-bottom: 10px;
+}
+
+.phase-feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.phase-feature-list span {
+  background: var(--bg-app-canvas);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+.phase-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
 }
 
 /* Vault Table */
@@ -2213,6 +2487,11 @@ body.inspector-open .mobile-backdrop {
   }
   
   .action-grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-preview-grid,
+  .roadmap-grid {
     grid-template-columns: 1fr;
   }
   
@@ -3383,6 +3662,7 @@ function setupEventListeners() {
     "btnNavSearch": "searchChatsScreen",
     "btnNavGuide": "insuranceGuideScreen",
     "btnNavPlatform": "platformGuideScreen",
+    "btnNavRoadmap": "roadmapScreen",
     "btnNavVault": "insuranceVaultScreen"
   };
 
@@ -3430,6 +3710,11 @@ function setupEventListeners() {
   const headerUploadBtn = document.getElementById("headerUploadBtn");
   if (headerUploadBtn) {
     headerUploadBtn.addEventListener("click", triggerUpload);
+  }
+
+  const micBtn = document.querySelector(".mic-btn");
+  if (micBtn) {
+    micBtn.addEventListener("click", activateVoiceCapture);
   }
 
   pdfFileInput.addEventListener("change", (e) => {
@@ -3582,18 +3867,67 @@ function triggerPreset(type, customQuery = null) {
 
   if (type === "quotes") {
     composerInput.value = "What is the premium rate for Commercial Vehicle package policies?";
+    submitQuery(composerInput.value);
   } else if (type === "renew") {
-    composerInput.value = "Explain the policy renewal grace period terms.";
+    composerInput.value = "Find the best renewal option, compare savings, and flag any premium increase.";
+    submitQuery(composerInput.value);
   } else if (type === "vault") {
     const btnNavVault = document.getElementById("btnNavVault");
     if (btnNavVault) btnNavVault.click();
     return;
   } else if (type === "claim") {
-    composerInput.value = "What documents are required to file a death benefit claim?";
+    composerInput.value = "Give me a real-time claim checklist, document status, and next steps.";
+    submitQuery(composerInput.value);
+  } else if (type === "advisor") {
+    composerInput.value = "Explain this policy in simple language with evidence, exclusions, and a policy health summary.";
+    submitQuery(composerInput.value);
+  } else if (type === "health") {
+    composerInput.value = "Score this policy's health, highlight coverage gaps, and suggest what to improve.";
+    submitQuery(composerInput.value);
+  } else if (type === "voice") {
+    activateVoiceCapture();
+    return;
+  } else if (type === "handoff") {
+    composerInput.value = "I need a human advisor to review a complex insurance case and continue the conversation.";
+    showToast("Human handoff request prepared. Add the case details and send it.", "headphones");
+    composerInput.focus();
+    return;
   } else if (type === "ask") {
     composerInput.value = "What are the standard exclusions under the Bharat Griha Raksha policy?";
+    submitQuery(composerInput.value);
   }
   composerInput.focus();
+}
+
+function activateVoiceCapture() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("Voice input is not supported in this browser.", "mic-off");
+    composerInput.value = "Translate this request into Hindi and English, then answer clearly.";
+    composerInput.focus();
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  showToast("Listening for your insurance question.", "mic");
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    composerInput.value = transcript;
+    composerInput.focus();
+    showToast("Voice captured. Sending to the advisor.", "languages");
+    submitQuery(transcript);
+  };
+
+  recognition.onerror = () => {
+    showToast("Voice capture stopped. Try again.", "mic-off");
+  };
+
+  recognition.start();
 }
 
 // Upload PDF to backend

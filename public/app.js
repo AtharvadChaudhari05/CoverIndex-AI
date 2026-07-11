@@ -291,6 +291,7 @@ function setupEventListeners() {
     "btnNavSearch": "searchChatsScreen",
     "btnNavGuide": "insuranceGuideScreen",
     "btnNavPlatform": "platformGuideScreen",
+    "btnNavRoadmap": "roadmapScreen",
     "btnNavVault": "insuranceVaultScreen"
   };
 
@@ -338,6 +339,11 @@ function setupEventListeners() {
   const headerUploadBtn = document.getElementById("headerUploadBtn");
   if (headerUploadBtn) {
     headerUploadBtn.addEventListener("click", triggerUpload);
+  }
+
+  const micBtn = document.querySelector(".mic-btn");
+  if (micBtn) {
+    micBtn.addEventListener("click", activateVoiceCapture);
   }
 
   pdfFileInput.addEventListener("change", (e) => {
@@ -490,18 +496,67 @@ function triggerPreset(type, customQuery = null) {
 
   if (type === "quotes") {
     composerInput.value = "What is the premium rate for Commercial Vehicle package policies?";
+    submitQuery(composerInput.value);
   } else if (type === "renew") {
-    composerInput.value = "Explain the policy renewal grace period terms.";
+    composerInput.value = "Find the best renewal option, compare savings, and flag any premium increase.";
+    submitQuery(composerInput.value);
   } else if (type === "vault") {
     const btnNavVault = document.getElementById("btnNavVault");
     if (btnNavVault) btnNavVault.click();
     return;
   } else if (type === "claim") {
-    composerInput.value = "What documents are required to file a death benefit claim?";
+    composerInput.value = "Give me a real-time claim checklist, document status, and next steps.";
+    submitQuery(composerInput.value);
+  } else if (type === "advisor") {
+    composerInput.value = "Explain this policy in simple language with evidence, exclusions, and a policy health summary.";
+    submitQuery(composerInput.value);
+  } else if (type === "health") {
+    composerInput.value = "Score this policy's health, highlight coverage gaps, and suggest what to improve.";
+    submitQuery(composerInput.value);
+  } else if (type === "voice") {
+    activateVoiceCapture();
+    return;
+  } else if (type === "handoff") {
+    composerInput.value = "I need a human advisor to review a complex insurance case and continue the conversation.";
+    showToast("Human handoff request prepared. Add the case details and send it.", "headphones");
+    composerInput.focus();
+    return;
   } else if (type === "ask") {
     composerInput.value = "What are the standard exclusions under the Bharat Griha Raksha policy?";
+    submitQuery(composerInput.value);
   }
   composerInput.focus();
+}
+
+function activateVoiceCapture() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("Voice input is not supported in this browser.", "mic-off");
+    composerInput.value = "Translate this request into Hindi and English, then answer clearly.";
+    composerInput.focus();
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  showToast("Listening for your insurance question.", "mic");
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    composerInput.value = transcript;
+    composerInput.focus();
+    showToast("Voice captured. Sending to the advisor.", "languages");
+    submitQuery(transcript);
+  };
+
+  recognition.onerror = () => {
+    showToast("Voice capture stopped. Try again.", "mic-off");
+  };
+
+  recognition.start();
 }
 
 // Upload PDF to backend

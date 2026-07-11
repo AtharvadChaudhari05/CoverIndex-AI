@@ -50,6 +50,7 @@ const statusText = document.getElementById("statusText");
 const attachmentPreviewBar = document.getElementById("attachmentPreviewBar");
 const attachmentFileName = document.getElementById("attachmentFileName");
 const removeAttachmentBtn = document.getElementById("removeAttachmentBtn");
+const voiceLanguageSelect = document.getElementById("voiceLanguageSelect");
 
 
 // Inspector
@@ -79,6 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLandingShowcase();
   initFeatureShowcase();
   setupEventListeners();
+  initVoiceLanguagePreference();
   loadIndexStatus();
   loadIndexedPolicies();
   syncMobileOverlays();
@@ -200,6 +202,39 @@ function restartFeatureShowcaseTimer(activate) {
   featureShowcaseTimer = setInterval(() => {
     activate(featureShowcaseIndex + 1);
   }, 4200);
+}
+
+function initVoiceLanguagePreference() {
+  if (!voiceLanguageSelect) return;
+
+  const storedValue = localStorage.getItem("coverindex-voice-language");
+  if (storedValue) {
+    voiceLanguageSelect.value = storedValue;
+  }
+
+  voiceLanguageSelect.addEventListener("change", () => {
+    localStorage.setItem("coverindex-voice-language", voiceLanguageSelect.value);
+  });
+}
+
+function getVoiceRecognitionLanguage() {
+  const selectedValue = voiceLanguageSelect?.value || localStorage.getItem("coverindex-voice-language") || "auto";
+  if (selectedValue !== "auto") {
+    return selectedValue;
+  }
+  return navigator.language || "en-IN";
+}
+
+function getVoiceLanguageLabel(languageCode) {
+  const languageMap = {
+    "en-IN": "English",
+    "hi-IN": "Hindi",
+    "mr-IN": "Marathi",
+    "ta-IN": "Tamil",
+    "te-IN": "Telugu",
+    "bn-IN": "Bengali",
+  };
+  return languageMap[languageCode] || languageCode;
 }
 
 // Navigation between Landing and Dashboard
@@ -593,14 +628,14 @@ function activateVoiceCapture() {
   }
 
   const recognition = new SpeechRecognition();
-  const preferredLang = navigator.language || "en-IN";
+  const preferredLang = getVoiceRecognitionLanguage();
   recognition.lang = preferredLang;
   recognition.continuous = true;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
   window.__coverIndexVoiceRecognition = recognition;
 
-  showToast("Listening for one complete insurance question.", "mic");
+  showToast(`Listening in ${getVoiceLanguageLabel(preferredLang)}.`, "mic");
 
   let finalTranscript = "";
   let interimTranscript = "";

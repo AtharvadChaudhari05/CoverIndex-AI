@@ -428,30 +428,147 @@
 
         <!-- Insurance Guide Screen (hidden initially) -->
         <div class="view-screen hidden" id="insuranceGuideScreen">
-          <div class="screen-header">
-            <div class="screen-icon"><i data-lucide="shield"></i></div>
-            <h2>Insurance Guide</h2>
-            <p>Explore resources and understand coverage options.</p>
+          <section class="guide-hero-shell">
+            <div class="guide-hero-copy">
+              <span class="guide-eyebrow">Insurance guide</span>
+              <h2>Understand policies the way real users actually shop for them.</h2>
+              <p>Inspired by the Coverfox guide flow, this guide groups the most common insurance journeys into simple explainers, action cards, and instant AI follow-ups.</p>
+              <div class="guide-hero-actions">
+                <button class="guide-btn" onclick="triggerPreset('ask', 'Explain health insurance basics in simple terms with examples.')">Ask the advisor</button>
+                <button class="guide-btn secondary" onclick="triggerPreset('quotes')">Compare policies</button>
+              </div>
+            </div>
+            <div class="guide-hero-preview">
+              <div class="guide-preview-panel">
+                <div class="guide-preview-head">
+                  <span class="guide-preview-dot"></span>
+                  <strong>What users ask most</strong>
+                </div>
+                <div class="guide-preview-question">What is waiting period in health insurance?</div>
+                <div class="guide-preview-answer">A waiting period is the time before a claim becomes payable for specific illnesses, maternity, or pre-existing conditions.</div>
+                <div class="guide-preview-tags">
+                  <span>Health</span>
+                  <span>Claims</span>
+                  <span>Policy wording</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="guide-chip-nav">
+            <button class="guide-chip active" type="button" onclick="triggerPreset('ask', 'Explain health insurance basics in simple language.')">Health insurance</button>
+            <button class="guide-chip" type="button" onclick="triggerPreset('ask', 'Explain motor insurance basics including IDV and NCB.')">Motor insurance</button>
+            <button class="guide-chip" type="button" onclick="triggerPreset('ask', 'Explain term life insurance basics for first-time buyers.')">Term life</button>
+            <button class="guide-chip" type="button" onclick="triggerPreset('claim')">Claims help</button>
+            <button class="guide-chip" type="button" onclick="triggerPreset('renew')">Renewals</button>
+            <button class="guide-chip" type="button" onclick="triggerUpload()">Policy PDFs</button>
           </div>
-          <div class="guide-grid">
-            <div class="guide-card">
-              <div class="guide-icon"><i data-lucide="activity"></i></div>
-              <h3>Health Insurance</h3>
-              <p>Learn about waiting periods, copays, and exclusions.</p>
-              <button class="guide-btn" onclick="triggerPreset('ask', 'What are standard waiting periods in health insurance?')">Learn More</button>
-            </div>
-            <div class="guide-card">
-              <div class="guide-icon"><i data-lucide="car"></i></div>
-              <h3>Motor Insurance</h3>
-              <p>Understand IDV, NCB, and zero depreciation add-ons.</p>
-              <button class="guide-btn" onclick="triggerPreset('ask', 'How is IDV calculated for a 3 year old car?')">Learn More</button>
-            </div>
-            <div class="guide-card">
-              <div class="guide-icon"><i data-lucide="heart"></i></div>
-              <h3>Term Life</h3>
-              <p>Secure your family's future with the right sum assured.</p>
-              <button class="guide-btn" onclick="triggerPreset('ask', 'What is a term life insurance policy?')">Learn More</button>
-            </div>
+
+          <div class="guide-showcase-grid">
+            <article class="guide-feature-card">
+              <div class="guide-feature-icon emerald"><i data-lucide="activity"></i></div>
+              <div class="guide-feature-copy">
+                <h3>Health Insurance</h3>
+                <p>Waiting periods, room rent caps, cashless care, exclusions, co-pay, and family floater logic.</p>
+                <div class="guide-feature-links">
+                  <button class="guide-link-btn" onclick="triggerPreset('ask', 'What are standard waiting periods in health insurance?')">Waiting periods</button>
+                  <button class="guide-link-btn" onclick="triggerPreset('health')">Coverage gaps</button>
+                  <button class="guide-link-btn" onclick="triggerPreset('ask', 'Explain room rent limits and co-pay with examples.')">Room rent and co-pay</button>
+                </div>
+              </div>
+            </article>
+            <article class="guide-feature-card">
+              <div class="guide-feature-icon blue"><i data-lucide="car"></i></div>
+              <div class="guide-feature-copy">
+                <h3>Motor Insurance</h3>
+                <p>IDV, NCB, add-ons, depreciation, own damage cover, and how quote comparisons should be read.</p>
+                <div class="guide-feature-links">
+                  <button class="guide-link-btn" onclick="triggerPreset('ask', 'How is IDV calculated for a 3 year old car?')">IDV basics</button>
+                  <button class="guide-link-btn" onclick="triggerPreset('quotes')">Compare quotes</button>
+                  <button class="guide-link-btn" onclick="triggerPreset('ask', 'Explain zero dep and NCB protection add-ons.')">Add-ons</button>
+                </div>
+              </div>
+            </article>
+            <article class="guide-feature-card">
+              <div class="guide-feature-icon rose"><i data-lucide="heart"></i></div>
+              <div class="guide-feature-copy">
+                <h3>Term Life Insurance</h3>
+                <p>Sum assured planning, nominee understanding, claim settlement context, and rider selection.</p>
+                <div class="guide-feature-links">
+                  <button class="guide-link-btn" onclick="triggerPreset('ask', 'What is a term life insurance policy?')">Term life basics</button>
+                  <button class="guide-link-btn" onclick="triggerPreset('ask', 'How much sum assured should a salaried person choose?')">Sum assured</button>
+                  <button class="guide-link-btn" onclick="triggerPreset('ask', 'Which riders are useful in term insurance?')">Riders</button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="guide-columns">
+            <section class="guide-knowledge-column">
+              <div class="guide-section-head">
+                <span>Popular explainers</span>
+                <h3>Built for browsing first, then chatting.</h3>
+              </div>
+              <div class="guide-article-grid">
+                <article class="guide-article-card">
+                  <h4>Buying health insurance</h4>
+                  <ul>
+                    <li>Waiting period and pre-existing illness rules</li>
+                    <li>Family floater vs individual cover</li>
+                    <li>Restoration benefits and sub-limits</li>
+                  </ul>
+                  <button class="guide-btn secondary" onclick="triggerPreset('ask', 'Explain how to evaluate a health policy before buying.')">Open explainer</button>
+                </article>
+                <article class="guide-article-card">
+                  <h4>Buying motor insurance</h4>
+                  <ul>
+                    <li>IDV and claim impact on premium</li>
+                    <li>Third-party vs comprehensive cover</li>
+                    <li>Useful add-ons for city driving</li>
+                  </ul>
+                  <button class="guide-btn secondary" onclick="triggerPreset('ask', 'Explain how to evaluate a motor insurance quote before buying.')">Open explainer</button>
+                </article>
+                <article class="guide-article-card">
+                  <h4>Renewals and claim readiness</h4>
+                  <ul>
+                    <li>What changes at renewal time</li>
+                    <li>When continuity benefits matter</li>
+                    <li>Claim documents users should keep ready</li>
+                  </ul>
+                  <button class="guide-btn secondary" onclick="triggerPreset('claim')">Start claim checklist</button>
+                </article>
+              </div>
+            </section>
+
+            <aside class="guide-side-panel">
+              <div class="guide-side-card">
+              <div class="guide-section-head compact">
+                  <span>Voice + multilingual</span>
+                  <h3>Choose your spoken language</h3>
+                </div>
+                <p>Use the language picker next to the mic before you speak. If you choose Marathi, the transcript stays in Marathi instead of being forced into English.</p>
+                <button class="guide-btn" onclick="triggerPreset('voice')">Test voice input</button>
+              </div>
+
+              <div class="guide-side-card faq-card">
+                <div class="guide-section-head compact">
+                  <span>Frequently asked</span>
+                  <h3>Quick answers</h3>
+                </div>
+                <details class="guide-faq-item">
+                  <summary>What is a waiting period?</summary>
+                  <p>It is the period before certain claims become payable, especially for pre-existing diseases, maternity, or named treatments.</p>
+                </details>
+                <details class="guide-faq-item">
+                  <summary>Why does IDV matter?</summary>
+                  <p>IDV influences your insured car value and total loss payout, so a lower premium is not always a better quote.</p>
+                </details>
+                <details class="guide-faq-item">
+                  <summary>When should I use the Policy Health Score?</summary>
+                  <p>Use it when you want to understand gaps, under-insurance, missing add-ons, or mismatch between your family needs and the current plan.</p>
+                </details>
+              </div>
+            </aside>
           </div>
         </div>
 
@@ -621,6 +738,15 @@
             <i data-lucide="paperclip" id="composerClipIcon"></i>
           </button>
           <input type="text" id="composerInput" placeholder="Ask CoverIndex AI..." autocomplete="off" />
+          <select id="voiceLanguageSelect" class="voice-language-inline" aria-label="Select voice language">
+            <option value="auto">Auto</option>
+            <option value="en-IN">English</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="mr-IN">Marathi</option>
+            <option value="ta-IN">Tamil</option>
+            <option value="te-IN">Telugu</option>
+            <option value="bn-IN">Bengali</option>
+          </select>
           <button type="button" class="composer-action-btn mic-btn" title="Voice Search"><i data-lucide="mic"></i></button>
           <button type="submit" class="composer-send-btn" id="composerSendBtn"><i data-lucide="arrow-up"></i></button>
         </form>

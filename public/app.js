@@ -29,6 +29,9 @@ let showcaseIndex = 0;
 let showcaseTimer = null;
 let featureShowcaseIndex = 0;
 let featureShowcaseTimer = null;
+let activeSessionId = null;
+let chatSessions = [];
+let showingArchivedChats = false;
 
 // DOM Elements
 const landingPage = document.getElementById("landingPage");
@@ -65,6 +68,8 @@ let voiceUnsupported = false;
 let voiceFinalSegments = new Map();
 let voiceMobileTranscript = "";
 
+const CHAT_STORAGE_KEY = "coverindex-chat-sessions-v1";
+
 
 // Inspector
 const appInspector = document.getElementById("appInspector");
@@ -96,6 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initVoiceSupport();
   setupEventListeners();
   initVoiceLanguagePreference();
+  initChatSessions();
   loadIndexStatus();
   loadIndexedPolicies();
   syncMobileOverlays();
@@ -495,7 +501,13 @@ function setupEventListeners() {
   if (viewArchivedBtn) {
     viewArchivedBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      showToast("Archived chats will be available in the next update.", "archive");
+      showingArchivedChats = !showingArchivedChats;
+      renderChatSessions();
+      viewArchivedBtn.classList.toggle("active", showingArchivedChats);
+      viewArchivedBtn.innerHTML = showingArchivedChats
+        ? `<i data-lucide="message-square"></i> View active chats`
+        : `<i data-lucide="archive"></i> View archived`;
+      if (window.lucide) lucide.createIcons();
     });
   }
 
@@ -565,6 +577,174 @@ function syncMobileOverlays() {
   document.body.classList.toggle("inspector-open", appDashboard.classList.contains("inspector-open"));
 }
 
+function initChatSessions() {
+  try {
+    chatSessions = JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY) || "[]");
+  } catch (error) {
+    chatSessions = [];
+  }
+  renderChatSessions();
+}
+
+function saveChatSessions() {
+  localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatSessions));
+}
+
+function createSessionId() {
+  return `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getActiveSession() {
+  return chatSessions.find((session) => session.id === activeSessionId) || null;
+}
+
+function ensureActiveSession(title = "New Chat") {
+  let session = getActiveSession();
+  if (session) return session;
+
+  session = {
+    id: createSessionId(),
+    title,
+    html: "",
+    updatedAt: Date.now(),
+    archived: false,
+  };
+  chatSessions.unshift(session);
+  activeSessionId = session.id;
+  activeSessionName = title;
+  chatSessionTitle.textContent = title;
+  saveChatSessions();
+  renderChatSessions();
+  return session;
+}
+
+function persistActiveSession() {
+  const session = getActiveSession();
+  if (!session) return;
+
+  session.html = chatHistory.innerHTML;
+  session.title = activeSessionName || session.title;
+  session.updatedAt = Date.now();
+  saveChatSessions();
+  renderChatSessions();
+}
+
+function formatSessionTime(timestamp) {
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+  if (diffMinutes < 1) return "now";
+  if (diffMinutes < 60) return `${diffMinutes}m`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  return `${Math.round(diffHours / 24)}d`;
+}
+
+function renderChatSessions() {
+  if (!chatsList) return;
+
+  chatsList.innerHTML = "";
+  const visibleSessions = chatSessions
+    .filter((session) => Boolean(session.archived) === showingArchivedChats)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  if (!visibleSessions.length) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "no-chats-placeholder";
+    placeholder.innerHTML = showingArchivedChats
+      ? `<i data-lucide="archive"></i><span>No archived chats</span>`
+      : `<i data-lucide="message-circle"></i><span>No chats yet</span>`;
+    chatsList.appendChild(placeholder);
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  visibleSessions.forEach((session) => {
+    chatsList.appendChild(createSessionListItem(session));
+  });
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function createSessionListItem(session) {
+  const item = document.createElement("div");
+  item.className = "sidebar-chat-item";
+  if (session.id === activeSessionId) item.classList.add("active");
+
+  const openButton = document.createElement("button");
+  openButton.type = "button";
+  openButton.className = "chat-open-btn";
+  openButton.title = session.title;
+  openButton.addEventListener("click", () => openChatSession(session.id));
+
+  const icon = document.createElement("i");
+  icon.setAttribute("data-lucide", session.archived ? "archive" : "message-square");
+
+  const nameDiv = document.createElement("div");
+  nameDiv.className = "chat-item-text";
+  nameDiv.textContent = session.title;
+
+  const timeDiv = document.createElement("div");
+  timeDiv.className = "chat-item-time";
+  timeDiv.textContent = formatSessionTime(session.updatedAt);
+
+  openButton.appendChild(icon);
+  openButton.appendChild(nameDiv);
+  openButton.appendChild(timeDiv);
+
+  const actionButton = document.createElement("button");
+  actionButton.type = "button";
+  actionButton.className = "chat-archive-btn";
+  actionButton.title = session.archived ? "Restore chat" : "Archive chat";
+  actionButton.setAttribute("aria-label", session.archived ? "Restore chat" : "Archive chat");
+  actionButton.innerHTML = session.archived
+    ? `<i data-lucide="rotate-ccw"></i>`
+    : `<i data-lucide="archive"></i>`;
+  actionButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleArchiveSession(session.id);
+  });
+
+  item.appendChild(openButton);
+  item.appendChild(actionButton);
+  return item;
+}
+
+function openChatSession(sessionId) {
+  const session = chatSessions.find((item) => item.id === sessionId);
+  if (!session) return;
+
+  activeSessionId = session.id;
+  activeSessionName = session.title;
+  chatSessionTitle.textContent = session.title;
+  chatHistory.innerHTML = session.html || "";
+  hasMessages = Boolean(session.html);
+  switchWorkspaceView(hasMessages ? "chatFeedWindow" : "welcomeScreen");
+  renderChatSessions();
+
+  document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
+  const btnNewChat = document.getElementById("btnNavNewChat");
+  if (btnNewChat) btnNewChat.classList.add("active");
+
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove("open");
+    syncMobileOverlays();
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function toggleArchiveSession(sessionId) {
+  const session = chatSessions.find((item) => item.id === sessionId);
+  if (!session) return;
+
+  session.archived = !session.archived;
+  session.updatedAt = Date.now();
+  if (session.id === activeSessionId && session.archived) {
+    resetChatWorkspace();
+  }
+  saveChatSessions();
+  renderChatSessions();
+  showToast(session.archived ? "Chat archived." : "Chat restored.", session.archived ? "archive" : "rotate-ccw");
+}
+
 // Toast System
 function showToast(message, iconName = "bell") {
   const toast = document.createElement("div");
@@ -623,13 +803,16 @@ function switchWorkspaceView(viewId) {
 
 // Reset workspace to welcome page
 function resetChatWorkspace() {
+  persistActiveSession();
   switchWorkspaceView("welcomeScreen");
   chatHistory.innerHTML = "";
   composerInput.value = "";
   chatSessionTitle.textContent = "New Chat";
   activeSessionName = "New Chat";
+  activeSessionId = null;
   hasMessages = false;
   clearStagedAttachment();
+  renderChatSessions();
   
   // Update Nav
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
@@ -935,44 +1118,25 @@ async function uploadPdfFile(file) {
 
 // Add chat session item under CHATS sidebar
 function createChatSessionItem(fileName) {
-  // Clear placeholder if first chat
-  const placeholder = chatsList.querySelector(".no-chats-placeholder");
-  if (placeholder) {
-    chatsList.removeChild(placeholder);
-  }
-
-  // Create chat item
-  const item = document.createElement("div");
-  item.className = "sidebar-chat-item active";
-  item.addEventListener("click", () => {
-    // Keep active
-    document.querySelectorAll(".sidebar-chat-item").forEach(i => i.classList.remove("active"));
-    item.classList.add("active");
-  });
-
-  const icon = document.createElement("i");
-  icon.setAttribute("data-lucide", "message-square");
-
-  const nameDiv = document.createElement("div");
-  nameDiv.className = "chat-item-text";
-  nameDiv.textContent = `Review: ${fileName}`;
-  chatSessionTitle.textContent = `Review: ${fileName}`;
-
-  const timeDiv = document.createElement("div");
-  timeDiv.className = "chat-item-time";
-  timeDiv.textContent = "0 min ago";
-
-  item.appendChild(icon);
-  item.appendChild(nameDiv);
-  item.appendChild(timeDiv);
-  chatsList.prepend(item);
-
-  if (window.lucide) lucide.createIcons();
+  const looksLikeFile = /\.[a-z0-9]{2,5}$/i.test(fileName);
+  const title = activeSessionName && activeSessionName !== "New Chat"
+    ? activeSessionName
+    : looksLikeFile
+      ? `Review: ${fileName}`
+      : fileName;
+  const session = ensureActiveSession(title);
+  session.title = title;
+  session.archived = false;
+  activeSessionName = title;
+  chatSessionTitle.textContent = title;
+  saveChatSessions();
+  renderChatSessions();
 }
 
 // Add new messages to feed
 let messageCounter = 0;
 function addMessage(role, text, attachedFileName = null) {
+  ensureActiveSession(activeSessionName === "New Chat" ? "New Chat" : activeSessionName);
   messageCounter++;
   const msgId = `msg-${messageCounter}`;
 
@@ -1025,6 +1189,7 @@ function addMessage(role, text, attachedFileName = null) {
   // Auto-scroll chat body
   workspaceBody.scrollTop = workspaceBody.scrollHeight;
   if (window.lucide) lucide.createIcons();
+  persistActiveSession();
   
   return msgId;
 }
@@ -1036,6 +1201,7 @@ function updateMessage(msgId, text) {
     const container = msgRow.querySelector(".assistant-text-container");
     if (container) {
       container.innerHTML = parseMarkdown(text);
+      persistActiveSession();
     }
   }
 }
@@ -1236,6 +1402,7 @@ function appendMetadataFooter(msgId, route, confidence) {
   const container = msgRow.querySelector(".assistant-text-container");
   if (container) {
     container.appendChild(footer);
+    persistActiveSession();
   }
 }
 

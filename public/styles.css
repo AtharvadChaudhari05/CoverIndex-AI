@@ -1094,14 +1094,13 @@ body.inspector-open .mobile-backdrop {
 .sidebar-chat-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 6px;
+  padding: 4px;
   border-radius: var(--radius-md);
   color: var(--text-main);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
-  cursor: pointer;
   margin-bottom: 2px;
   transition: var(--transition);
 }
@@ -1112,6 +1111,46 @@ body.inspector-open .mobile-backdrop {
 
 .sidebar-chat-item.active {
   background-color: rgba(77, 55, 236, 0.05);
+  color: var(--primary-purple);
+}
+
+.chat-open-btn,
+.chat-archive-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.chat-open-btn {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px 8px 10px;
+  text-align: left;
+}
+
+.chat-archive-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  opacity: 0;
+}
+
+.sidebar-chat-item:hover .chat-archive-btn,
+.sidebar-chat-item.active .chat-archive-btn,
+.chat-archive-btn:focus-visible {
+  opacity: 1;
+}
+
+.chat-archive-btn:hover {
+  background-color: rgba(77, 55, 236, 0.08);
   color: var(--primary-purple);
 }
 
@@ -1154,6 +1193,10 @@ body.inspector-open .mobile-backdrop {
 .view-archived i {
   width: 14px;
   height: 14px;
+}
+
+.view-archived.active {
+  color: var(--primary-purple);
 }
 
 /* User profile footer */

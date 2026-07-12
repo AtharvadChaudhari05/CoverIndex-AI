@@ -62,6 +62,8 @@ let voiceFinalTranscript = "";
 let voiceInterimTranscript = "";
 let voiceSettleTimer = null;
 let voiceUnsupported = false;
+let voiceFinalSegments = new Map();
+let voiceMobileTranscript = "";
 
 
 // Inspector
@@ -307,6 +309,19 @@ function getVoiceLanguageLabel(languageCode) {
     "bn-IN": "Bengali",
   };
   return languageMap[languageCode] || languageCode;
+}
+
+function isMobileVoiceEnvironment() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+}
+
+function rebuildVoiceFinalTranscript() {
+  voiceFinalTranscript = Array.from(voiceFinalSegments.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([, transcript]) => transcript)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // Navigation between Landing and Dashboard
@@ -707,9 +722,10 @@ function createVoiceRecognition() {
     return null;
   }
 
+  const mobileVoice = isMobileVoiceEnvironment();
   const recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
+  recognition.continuous = !mobileVoice;
+  recognition.interimResults = !mobileVoice;
   recognition.maxAlternatives = 1;
   recognition.lang = getVoiceRecognitionLanguage();
 
@@ -718,24 +734,48 @@ function createVoiceRecognition() {
     voiceManualStop = false;
     voiceFinalTranscript = "";
     voiceInterimTranscript = "";
+    voiceFinalSegments = new Map();
+    voiceMobileTranscript = "";
     composerInput.value = "";
     showToast(`Listening in ${getVoiceLanguageLabel(recognition.lang)}.`, "mic");
   };
 
   recognition.onresult = (event) => {
+    if (mobileVoice) {
+      const latestResult = event.results[event.results.length - 1];
+      if (!latestResult) return;
+
+      const transcript = latestResult[0].transcript.trim().replace(/\s+/g, " ");
+      if (latestResult.isFinal) {
+        voiceMobileTranscript = transcript;
+        voiceFinalTranscript = transcript;
+        voiceInterimTranscript = "";
+        composerInput.value = transcript;
+        composerInput.focus();
+        voiceSubmitOnEnd = true;
+        stopVoiceRecognition();
+      } else {
+        voiceInterimTranscript = transcript;
+        composerInput.value = transcript;
+        composerInput.focus();
+      }
+      return;
+    }
+
     let nextInterimTranscript = "";
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
       const transcript = result[0].transcript.trim();
       if (result.isFinal) {
-        voiceFinalTranscript = `${voiceFinalTranscript} ${transcript}`.trim();
+        voiceFinalSegments.set(i, transcript);
         continue;
       }
 
       nextInterimTranscript = `${nextInterimTranscript} ${transcript}`.trim();
     }
 
+    rebuildVoiceFinalTranscript();
     voiceInterimTranscript = nextInterimTranscript;
     const transcriptPreview = [voiceFinalTranscript, voiceInterimTranscript].filter(Boolean).join(" ").trim();
     composerInput.value = transcriptPreview;
@@ -757,6 +797,28 @@ function createVoiceRecognition() {
       voiceSettleTimer = null;
     }
     voiceIsListening = false;
+
+    if (mobileVoice) {
+      const transcript = voiceMobileTranscript || voiceFinalTranscript || voiceInterimTranscript;
+      const cleanedTranscript = transcript.replace(/\s+/g, " ").trim();
+
+      if (!voiceSubmitOnEnd || voiceManualStop) {
+        voiceSubmitOnEnd = false;
+        return;
+      }
+
+      if (!cleanedTranscript) {
+        showToast("No speech detected. Try again.", "mic-off");
+        voiceSubmitOnEnd = false;
+        return;
+      }
+
+      voiceSubmitOnEnd = false;
+      composerInput.value = cleanedTranscript;
+      showToast("Voice captured as one complete query.", "languages");
+      submitQuery(cleanedTranscript);
+      return;
+    }
 
     if (voiceRestartAfterStop) {
       voiceRestartAfterStop = false;

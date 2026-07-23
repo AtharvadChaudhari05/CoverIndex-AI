@@ -332,22 +332,22 @@ def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insura
 
 
 def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | None = None) -> str:
-    if not chat_history:
-        return query
-    
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return query
     
-    history_text = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in chat_history])
+    history_text = ""
+    if chat_history:
+        history_text = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in chat_history])
     
     system_prompt = (
-        "You are a query rewriting assistant. Given a chat history and a follow-up user query, "
-        "rewrite the follow-up query to be a standalone search query that contains all necessary context "
-        "from the history. If the query is already standalone, return it as is. "
-        "ONLY output the rewritten query, nothing else."
+        "You are an expert query understanding assistant. Your task is to process a user's query and output a standalone English search query. "
+        "Rules:\n"
+        "1. If the query is in any language other than English (e.g., Marathi, Hindi), you MUST translate it to English.\n"
+        "2. If there is a chat history, use it to resolve any ambiguous references in the follow-up query (e.g., 'what are its benefits' -> 'what are the benefits of the HDFC life policy').\n"
+        "3. Output ONLY the standalone English search query and absolutely nothing else."
     )
-    user_prompt = f"Chat History:\n{history_text}\n\nFollow-up Query: {query}\n\nRewritten Query:"
+    user_prompt = f"Chat History:\n{history_text if history_text else 'None'}\n\nUser Query: {query}\n\nStandalone English Query:"
     
     try:
         from groq import Groq
@@ -369,9 +369,16 @@ def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | 
 
 
 def answer_query(index: PageIndex, query: str, file_name: str | None = None, mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> QueryResult:
-    route = route_query(query)
-    trace = [f"router: {route.reasoning}"]
-    scope, scope_reasoning = classify_query_scope(query, route=route, file_name=file_name)
+    original_query = query
+    search_query = rewrite_query_with_history(query, chat_history)
+
+    route = route_query(search_query)
+    trace = [f"router: original query: {original_query}"]
+    if search_query != original_query:
+        trace.append(f"router: rewrote/translated query to: {search_query}")
+    
+    trace.append(f"router: route reasoning: {route.reasoning}")
+    scope, scope_reasoning = classify_query_scope(search_query, route=route, file_name=file_name)
     trace.append(f"scope: {scope_reasoning}")
 
     if scope == "out_of_scope" and mode != "fallback_confirmed":
@@ -387,7 +394,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
     # Auto-detect mentioned file name in query if not explicitly passed
     file_name_filter = file_name
     if not file_name_filter:
-        lowered_query = query.lower().replace("_", " ")
+        lowered_query = search_query.lower().replace("_", " ")
         all_filenames = sorted(list({r.file_name for r in index.records}), key=len, reverse=True)
         for fname in all_filenames:
             fname_clean = fname.lower().replace("_", " ")
@@ -396,10 +403,6 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 file_name_filter = fname
                 trace.append(f"router: auto-detected policy document mention in query: {fname}")
                 break
-
-    search_query = rewrite_query_with_history(query, chat_history)
-    if search_query != query:
-        trace.append(f"router: rewrote query using chat history -> {search_query}")
 
     if file_name_filter:
         trace.append(f"retriever: search constrained to document: {file_name_filter}")
@@ -419,7 +422,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
 
         if not hits and route.insurer is not None:
             trace.append("no direct match under insurer filter; falling back to broader search")
-            hits = index.search(query, product_hint=route.product_hint, top_k=4)
+            hits = index.search(search_query, product_hint=route.product_hint, top_k=4)
 
 
     sources = []

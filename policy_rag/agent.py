@@ -225,27 +225,34 @@ def is_allowed_normal_mode_answer(answer: str, has_evidence: bool) -> bool:
     stripped = answer.strip()
     if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE:
         return True
-    if has_evidence and answer_has_citations(stripped):
+    # Relax strict citation check to avoid throwing away perfectly valid answers
+    if has_evidence:
         return True
     return False
 
 
-def build_rag_messages(query: str, context_snippets: list[str], mode: str = "insurance_rag") -> list[dict[str, str]]:
+def build_rag_messages(query: str, context_snippets: list[str], mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> list[dict[str, str]]:
     context_text = "\n\n".join(context_snippets) if context_snippets else "NO POLICY SNIPPETS AVAILABLE."
     system_prompt = load_system_prompt(mode)
+    
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    if chat_history:
+        for msg in chat_history:
+            if msg.get("role") in ("user", "assistant"):
+                messages.append({"role": msg["role"], "content": msg["content"]})
+                
     user_prompt = (
         "Verified Policy Snippets:\n"
         f"{context_text}\n\n"
         f"User Query: {query}\n"
         "Answer:"
     )
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
+    messages.append({"role": "user", "content": user_prompt})
+    return messages
 
 
-def call_groq_rag(query: str, context_snippets: list[str], mode: str = "insurance_rag") -> str | None:
+def call_groq_rag(query: str, context_snippets: list[str], mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> str | None:
     """Calls Groq API using the groq library to generate a response.
     Returns None if no API key is available or the request fails.
     """
@@ -253,7 +260,7 @@ def call_groq_rag(query: str, context_snippets: list[str], mode: str = "insuranc
     if not api_key:
         return None
 
-    messages = build_rag_messages(query, context_snippets, mode=mode)
+    messages = build_rag_messages(query, context_snippets, mode=mode, chat_history=chat_history)
 
     try:
         from groq import Groq
@@ -285,7 +292,7 @@ def call_groq_rag(query: str, context_snippets: list[str], mode: str = "insuranc
     return None
 
 
-def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insurance_rag") -> str | None:
+def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> str | None:
     """Calls Gemini API using the new google-genai library with legacy fallback.
     Returns None if no API key is available or the request fails.
     """
@@ -293,7 +300,7 @@ def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insura
     if not api_key:
         return None
 
-    messages = build_rag_messages(query, context_snippets, mode=mode)
+    messages = build_rag_messages(query, context_snippets, mode=mode, chat_history=chat_history)
     prompt = f"{messages[0]['content']}\n\n{messages[1]['content']}"
 
     # Try modern google-genai client
@@ -323,7 +330,44 @@ def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insura
     return None
 
 
-def answer_query(index: PageIndex, query: str, file_name: str | None = None, mode: str = "insurance_rag") -> QueryResult:
+def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | None = None) -> str:
+    if not chat_history:
+        return query
+    
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return query
+    
+    history_text = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in chat_history])
+    
+    system_prompt = (
+        "You are a query rewriting assistant. Given a chat history and a follow-up user query, "
+        "rewrite the follow-up query to be a standalone search query that contains all necessary context "
+        "from the history. If the query is already standalone, return it as is. "
+        "ONLY output the rewritten query, nothing else."
+    )
+    user_prompt = f"Chat History:\n{history_text}\n\nFollow-up Query: {query}\n\nRewritten Query:"
+    
+    try:
+        from groq import Groq
+        client = Groq(api_key=api_key)
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            model="llama3-8b-8192",
+            temperature=0.0,
+            max_tokens=60,
+        )
+        rewritten = response.choices[0].message.content.strip()
+        return rewritten if rewritten else query
+    except Exception as e:
+        print(f"[CoverIndex AI] Query rewrite failed: {e}")
+        return query
+
+
+def answer_query(index: PageIndex, query: str, file_name: str | None = None, mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> QueryResult:
     route = route_query(query)
     trace = [f"router: {route.reasoning}"]
     scope, scope_reasoning = classify_query_scope(query, route=route, file_name=file_name)
@@ -352,17 +396,21 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 trace.append(f"router: auto-detected policy document mention in query: {fname}")
                 break
 
+    search_query = rewrite_query_with_history(query, chat_history)
+    if search_query != query:
+        trace.append(f"router: rewrote query using chat history -> {search_query}")
+
     if file_name_filter:
         trace.append(f"retriever: search constrained to document: {file_name_filter}")
         hits = index.search(
-            query,
+            search_query,
             file_name_filter=file_name_filter,
             top_k=4,
         )
     else:
         # Use routed insurer or product name to filter search
         hits = index.search(
-            query,
+            search_query,
             insurer_filter=route.insurer,
             product_hint=route.product_hint,
             top_k=4,

@@ -1226,20 +1226,18 @@ function parseMarkdown(text) {
 
   // Format bullet lists (- item)
   html = html.replace(/^\- (.*?)$/gm, '<li style="margin-left:14px; margin-bottom:8px; list-style-type:circle; padding-left:4px;">$1</li>');
-
-  // Convert blockquote alerts (> [!WARNING] or > [!NOTE])
+  // Convert blockquote alerts (> [!WARNING] or > [!NOTE])
   html = html.replace(/&gt;\s*\[\!WARNING\]\s*\n&gt;\s*(.*?)$/gm, '<blockquote style="background-color:#fff7ed; border-left:4px solid #f97316; padding:12px 16px; border-radius:6px; margin:14px 0; color:#c2410c; font-size:0.88rem;"><p>$1</p></blockquote>');
   html = html.replace(/&gt;\s*\[\!NOTE\]\s*\n&gt;\s*(.*?)$/gm, '<blockquote style="background-color:#f0fdf4; border-left:4px solid #22c55e; padding:12px 16px; border-radius:6px; margin:14px 0; color:#15803d; font-size:0.88rem;"><p>$1</p></blockquote>');
   html = html.replace(/&gt;\s*(.*?)$/gm, '<blockquote style="background-color:var(--bg-app-canvas); border-left:4px solid var(--text-muted); padding:10px 14px; border-radius:4px; margin:10px 0; font-size:0.88rem;"><p>$1</p></blockquote>');
 
-  // Grounding Citation Badges (e.g. [policy_bond.pdf p. 4])
-  const citationRegex = /\[([^\]]+?\.(?:pdf|zip|txt))\s+p\s*[-–]?\s*(\d+)\]/gi;
+  // Grounding Citation Badges (e.g. [policy_bond.pdf p. 4] or (policy_bond.pdf, p. 4))
+  const citationRegex = /[\[\(]([^\]\)]+?\.(?:pdf|zip|txt))(?:,\s*|\s+)p\.?\s*[-–]?\s*(\d+)[\]\)]/gi;
   html = html.replace(citationRegex, (match, filename, page) => {
     const citationId = `${filename} p. ${page}`;
     const truncatedText = filename.length > 25 ? filename.slice(0, 22) + "..." : filename;
     return `<span class="citation-link" onclick="highlightSource('${citationId}')" title="Click to inspect source text">${truncatedText} p. ${page}</span>`;
   });
-
   return html;
 }
 
@@ -1319,6 +1317,20 @@ async function submitQuery(query) {
       askFileName = activeSessionName.replace("Review: ", "");
     }
 
+    // Extract recent chat history (last 5 messages)
+    const chatHistory = [];
+    const messageNodes = document.querySelectorAll("#chatFeedWindow .message-bubble-row:not(#msg-" + messageCounter + ")");
+    const historyNodes = Array.from(messageNodes).slice(-5);
+    for (const node of historyNodes) {
+      const role = node.classList.contains("user") ? "user" : "assistant";
+      let text = node.innerText || "";
+      // Clean up text if it contains citations or headers
+      text = text.replace(/Click to inspect source text/g, "").trim();
+      if (text.length > 0) {
+        chatHistory.push({ role, content: text });
+      }
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1326,6 +1338,7 @@ async function submitQuery(query) {
         query,
         file_name: askFileName,
         session_id: activeSessionId,
+        chat_history: chatHistory,
       })
     });
     const payload = await response.json();

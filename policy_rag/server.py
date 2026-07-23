@@ -177,6 +177,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     query = str(payload.get("query", "")).strip()
                     file_name = payload.get("file_name")
                     session_id = str(payload.get("session_id") or "default").strip() or "default"
+                    chat_history = payload.get("chat_history", [])
                     confirm_fallback = bool(payload.get("confirm_fallback", False))
                     if file_name:
                         file_name = str(file_name).strip()
@@ -241,7 +242,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     query_to_answer = state.last_out_of_scope_query or query
                     state.status = "fallback_confirmed"
                     state.last_out_of_scope_query = None
-                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed")
+                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history)
                     response_meta.update(
                         {
                             "assistant_mode": "fallback_confirmed",
@@ -252,7 +253,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 else:
                     state.status = "insurance"
                     state.last_out_of_scope_query = None
-                    result = answer_query(index, query, file_name=file_name, mode="insurance_rag")
+                    result = answer_query(index, query, file_name=file_name, mode="insurance_rag", chat_history=chat_history)
                     response_meta.update(
                         {
                             "assistant_mode": "insurance_rag",

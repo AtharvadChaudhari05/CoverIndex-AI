@@ -207,7 +207,6 @@ OUT_OF_SCOPE_REFUSAL_MESSAGE = (
     "I cannot answer questions based on general knowledge. "
     "Please ask me something about your uploaded documents, insurance policies, or claims instead."
 )
-INSUFFICIENT_CONTEXT_MESSAGE = "It is not in the provided policy. I cannot answer based on general knowledge."
 FALLBACK_PREFIX = "This is general information and not based on your uploaded policy documents:"
 
 
@@ -224,7 +223,7 @@ def normalize_fallback_answer(answer: str) -> str:
 
 def is_allowed_normal_mode_answer(answer: str, has_evidence: bool) -> bool:
     stripped = answer.strip()
-    if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE or stripped == INSUFFICIENT_CONTEXT_MESSAGE:
+    if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE or "[NO_CONTEXT]" in stripped:
         return True
     # Relax strict citation check to avoid throwing away perfectly valid answers
     if has_evidence:
@@ -367,6 +366,36 @@ def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | 
         print(f"[CoverIndex AI] Query rewrite failed: {e}")
         return query
 
+def translate_to_user_language(text: str, user_query: str) -> str:
+    """Translates the given text into the language of the user_query using Groq."""
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return text
+    
+    system_prompt = (
+        "You are a translation assistant. Your task is to detect the language of the provided 'User Query', "
+        "and translate the 'Text to Translate' into that exact same language. "
+        "Output ONLY the translated text and nothing else."
+    )
+    user_prompt = f"User Query: {user_query}\n\nText to Translate: {text}"
+    
+    try:
+        from groq import Groq
+        client = Groq(api_key=api_key)
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            model="llama3-8b-8192",
+            temperature=0.0,
+            max_tokens=60,
+        )
+        translated = response.choices[0].message.content.strip()
+        return translated if translated else text
+    except Exception as e:
+        print(f"[CoverIndex AI] Translation failed: {e}")
+        return text
 
 def answer_query(index: PageIndex, query: str, file_name: str | None = None, mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> QueryResult:
     original_query = query
@@ -383,8 +412,9 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
 
     if scope == "out_of_scope" and mode != "fallback_confirmed":
         trace.append("generator: refused out-of-scope query before retrieval")
+        translated_refusal = translate_to_user_language(OUT_OF_SCOPE_REFUSAL_MESSAGE, original_query)
         return QueryResult(
-            answer=OUT_OF_SCOPE_REFUSAL_MESSAGE,
+            answer=translated_refusal,
             confidence=0.0,
             route=route,
             sources=[],
@@ -521,7 +551,10 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 answer = OUT_OF_SCOPE_REFUSAL_MESSAGE
 
     # Auto-append missing citations if the LLM forgot to include them
-    if answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and answer != INSUFFICIENT_CONTEXT_MESSAGE and sources and not answer_has_citations(answer):
+    if answer and "[NO_CONTEXT]" in answer:
+        answer = answer.replace("[NO_CONTEXT]", "").strip()
+        trace.append("generator: detected NO_CONTEXT tag; skipped appending citations")
+    elif answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and sources and not answer_has_citations(answer):
         sources_text = "\n\n**Sources:**\n"
         for s in sources[:3]:  # Top 3 sources
             sources_text += f"- [{s['citation']}]\n"

@@ -4,7 +4,7 @@
 
 // Configure this to point to your Render backend URL once deployed.
 // For local development, leave it as empty string to use relative paths.
-const API_BASE_URL = "https://coverindex-ai.onrender.com";
+const API_BASE_URL = "";
 
 // Typing animation items
 const typingSentences = [
@@ -1320,15 +1320,23 @@ async function submitQuery(query) {
     const response = await fetch(`${API_BASE_URL}/api/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, file_name: askFileName })
+      body: JSON.stringify({
+        query,
+        file_name: askFileName,
+        session_id: activeSessionId,
+      })
     });
     const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Query failed");
-    }
+      if (!response.ok) {
+        throw new Error(payload.error || "Query failed");
+      }
 
-    // Render answer
-    updateMessage(loadingId, payload.answer);
+      // Render answer
+      const exactRefusal = "This looks outside my scope as an insurance assistant. Could you ask me something about your insurance, policies, or claims instead?";
+      const safeAnswer = payload.query_scope === "out_of_scope"
+        ? exactRefusal
+        : payload.answer;
+      updateMessage(loadingId, safeAnswer);
     
     // Add routing info trace to loading bubble footer if active
     if (payload.route || payload.confidence) {

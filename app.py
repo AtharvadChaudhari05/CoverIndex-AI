@@ -1,4 +1,9 @@
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional in bundled test/runtime environments
+    def load_dotenv(*args, **kwargs):  # type: ignore[override]
+        return False
+
 load_dotenv(override=True)
 
 import os

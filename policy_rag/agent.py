@@ -4,6 +4,7 @@ import os
 import re
 from collections import OrderedDict
 
+from .config import load_system_prompt
 from .index import PageIndex
 from .models import QueryResult, QueryRoute
 from .utils import compact_whitespace, normalize_text, split_sentences, tokenize
@@ -32,6 +33,68 @@ INTENT_RULES = OrderedDict(
         ("policy details", ["policy number", "term", "maturity date", "nominee"]),
     ]
 )
+
+INSURANCE_SCOPE_TERMS = [
+    "insurance",
+    "policy",
+    "claim",
+    "claims",
+    "renewal",
+    "renewals",
+    "premium",
+    "coverage",
+    "covered",
+    "sum assured",
+    "insurer",
+    "cashless",
+    "hospitalization",
+    "health",
+    "motor",
+    "term life",
+    "term insurance",
+    "life insurance",
+    "add-on",
+    "add ons",
+    "exclusion",
+    "waiting period",
+    "co-pay",
+    "copay",
+    "deductible",
+    "policy document",
+    "policy pdf",
+]
+
+OUT_OF_SCOPE_TERMS = [
+    "python",
+    "java",
+    "oop",
+    "programming",
+    "algorithm",
+    "database",
+    "sql",
+    "linux",
+    "react",
+    "javascript",
+    "general knowledge",
+    "history",
+    "physics",
+    "chemistry",
+    "mathematics",
+]
+
+CONFIRMATION_TERMS = {
+    "yes",
+    "y",
+    "yeah",
+    "yep",
+    "ok",
+    "okay",
+    "sure",
+    "confirm",
+    "confirmed",
+    "go ahead",
+    "proceed",
+}
 
 
 def route_query(query: str) -> QueryRoute:
@@ -111,7 +174,78 @@ def extract_product_hint(query: str) -> str | None:
     return None
 
 
-def call_groq_rag(query: str, context_snippets: list[str]) -> str | None:
+def _has_keyword(query: str, terms: list[str] | set[str]) -> bool:
+    lowered = normalize_text(query).lower()
+    for term in terms:
+        pattern = r"\b" + re.escape(term) + r"\b"
+        if re.search(pattern, lowered):
+            return True
+    return False
+
+
+def classify_query_scope(query: str, route: QueryRoute | None = None, file_name: str | None = None) -> tuple[str, str]:
+    lowered = normalize_text(query).lower()
+    if file_name:
+        return "insurance", f"explicit file mention: {file_name}"
+    if route and (route.insurer or route.intent != "general"):
+        return "insurance", f"routing indicates insurance context: {route.reasoning}"
+    if _has_keyword(lowered, INSURANCE_SCOPE_TERMS):
+        return "insurance", "matched insurance vocabulary"
+    if _has_keyword(lowered, OUT_OF_SCOPE_TERMS):
+        return "out_of_scope", "matched out-of-domain vocabulary"
+    return "out_of_scope", "no insurance signal found"
+
+
+def is_confirmation_query(query: str) -> bool:
+    cleaned = normalize_text(query).strip().lower()
+    cleaned = re.sub(r"[.!?]+$", "", cleaned)
+    return cleaned in CONFIRMATION_TERMS
+
+
+ANSWER_CITATION_PATTERN = re.compile(r"\[[^\]]+?\.(?:pdf|zip|txt)\s+p\.?\s*\d+\]", re.IGNORECASE)
+OUT_OF_SCOPE_REFUSAL_MESSAGE = (
+    "This looks outside my scope as an insurance assistant. "
+    "Could you ask me something about your insurance, policies, or claims instead?"
+)
+FALLBACK_PREFIX = "This is general information and not based on your uploaded policy documents:"
+
+
+def answer_has_citations(answer: str) -> bool:
+    return bool(ANSWER_CITATION_PATTERN.search(answer))
+
+
+def normalize_fallback_answer(answer: str) -> str:
+    stripped = answer.strip()
+    if stripped.startswith(FALLBACK_PREFIX):
+        return stripped
+    return f"{FALLBACK_PREFIX} {stripped}"
+
+
+def is_allowed_normal_mode_answer(answer: str, has_evidence: bool) -> bool:
+    stripped = answer.strip()
+    if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE:
+        return True
+    if has_evidence and answer_has_citations(stripped):
+        return True
+    return False
+
+
+def build_rag_messages(query: str, context_snippets: list[str], mode: str = "insurance_rag") -> list[dict[str, str]]:
+    context_text = "\n\n".join(context_snippets) if context_snippets else "NO POLICY SNIPPETS AVAILABLE."
+    system_prompt = load_system_prompt(mode)
+    user_prompt = (
+        "Verified Policy Snippets:\n"
+        f"{context_text}\n\n"
+        f"User Query: {query}\n"
+        "Answer:"
+    )
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+
+def call_groq_rag(query: str, context_snippets: list[str], mode: str = "insurance_rag") -> str | None:
     """Calls Groq API using the groq library to generate a response.
     Returns None if no API key is available or the request fails.
     """
@@ -119,20 +253,7 @@ def call_groq_rag(query: str, context_snippets: list[str]) -> str | None:
     if not api_key:
         return None
 
-    context_text = "\n\n".join(context_snippets) if context_snippets else "NO POLICY SNIPPETS AVAILABLE."
-    prompt = f"""You are a highly precise and verified AI insurance assistant for CoverIndex AI.
-Your goal is to answer the query below.
-
-INSTRUCTIONS:
-1. Synthesize a cohesive, natural response to the user's query in your own words, strictly based on the provided verified policy document snippets below when they contain the relevant information. Formulate your response in clear, fluent sentences rather than listing raw quotes or copy-pasting verbatim text.
-2. For every fact or detail you mention from the policy snippets, you MUST cite the source file name and page number exactly as provided in the snippets in square brackets (e.g. [policy_bond.pdf p. 4]).
-3. If the snippets do not contain any relevant information to answer the query, or if context is empty, you should answer the query using your own general knowledge. In this case, please begin your response by stating that the answer is based on general knowledge rather than the policy documents.
-
-Verified Policy Snippets:
-{context_text}
-
-User Query: {query}
-Answer:"""
+    messages = build_rag_messages(query, context_snippets, mode=mode)
 
     try:
         from groq import Groq
@@ -140,10 +261,7 @@ Answer:"""
         # Using llama-3.1-8b-instant
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "You are a helpful insurance assistant. Prioritize answering using the provided verified policy snippets. If the snippets do not contain the answer, use your own general knowledge and state that the answer is based on general knowledge."},
-                {"role": "user", "content": prompt}
-            ],
+            messages=messages,
             temperature=0.0,
             max_tokens=1024,
         )
@@ -156,10 +274,7 @@ Answer:"""
             client = Groq(api_key=api_key)
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "You are a helpful insurance assistant. Prioritize answering using the provided verified policy snippets. If the snippets do not contain the answer, use your own general knowledge and state that the answer is based on general knowledge."},
-                    {"role": "user", "content": prompt}
-                ],
+                messages=messages,
                 temperature=0.0,
                 max_tokens=1024,
             )
@@ -170,7 +285,7 @@ Answer:"""
     return None
 
 
-def call_gemini_rag(query: str, context_snippets: list[str]) -> str | None:
+def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insurance_rag") -> str | None:
     """Calls Gemini API using the new google-genai library with legacy fallback.
     Returns None if no API key is available or the request fails.
     """
@@ -178,20 +293,8 @@ def call_gemini_rag(query: str, context_snippets: list[str]) -> str | None:
     if not api_key:
         return None
 
-    context_text = "\n\n".join(context_snippets) if context_snippets else "NO POLICY SNIPPETS AVAILABLE."
-    prompt = f"""You are a highly precise and verified AI insurance assistant for CoverIndex AI.
-Your goal is to answer the query below.
-
-INSTRUCTIONS:
-1. Synthesize a cohesive, natural response to the user's query in your own words, strictly based on the provided verified policy document snippets below when they contain the relevant information. Formulate your response in clear, fluent sentences rather than listing raw quotes or copy-pasting verbatim text.
-2. For every fact or detail you mention from the policy snippets, you MUST cite the source file name and page number exactly as provided in the snippets in square brackets (e.g. [policy_bond.pdf p. 4]).
-3. If the snippets do not contain any relevant information to answer the query, or if context is empty, you should answer the query using your own general knowledge. In this case, please begin your response by stating that the answer is based on general knowledge rather than the policy documents.
-
-Verified Policy Snippets:
-{context_text}
-
-User Query: {query}
-Answer:"""
+    messages = build_rag_messages(query, context_snippets, mode=mode)
+    prompt = f"{messages[0]['content']}\n\n{messages[1]['content']}"
 
     # Try modern google-genai client
     try:
@@ -220,9 +323,21 @@ Answer:"""
     return None
 
 
-def answer_query(index: PageIndex, query: str, file_name: str | None = None) -> QueryResult:
+def answer_query(index: PageIndex, query: str, file_name: str | None = None, mode: str = "insurance_rag") -> QueryResult:
     route = route_query(query)
     trace = [f"router: {route.reasoning}"]
+    scope, scope_reasoning = classify_query_scope(query, route=route, file_name=file_name)
+    trace.append(f"scope: {scope_reasoning}")
+
+    if scope == "out_of_scope" and mode != "fallback_confirmed":
+        trace.append("generator: refused out-of-scope query before retrieval")
+        return QueryResult(
+            answer=OUT_OF_SCOPE_REFUSAL_MESSAGE,
+            confidence=0.0,
+            route=route,
+            sources=[],
+            trace=trace,
+        )
 
     # Auto-detect mentioned file name in query if not explicitly passed
     file_name_filter = file_name
@@ -307,30 +422,50 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None) -> 
         confidence = 0.5
 
     # Try Groq generation first
-    groq_answer = call_groq_rag(query, evidence_snippets)
+    groq_answer = call_groq_rag(query, evidence_snippets, mode=mode)
 
     if groq_answer:
-        answer = groq_answer
-        trace.append("generator: synthesis completed using Groq API (100% grounded)")
+        if mode == "fallback_confirmed":
+            answer = normalize_fallback_answer(groq_answer)
+            trace.append("generator: synthesis completed using Groq API in fallback-confirmed mode")
+        elif is_allowed_normal_mode_answer(groq_answer, bool(evidence_snippets)):
+            answer = groq_answer
+            trace.append("generator: synthesis completed using Groq API (grounding validated)")
+        else:
+            trace.append("generator: rejected Groq response without valid grounding")
+            groq_answer = None
+            answer = None
     else:
         # Try Gemini generation second
-        gemini_answer = call_gemini_rag(query, evidence_snippets)
+        gemini_answer = call_gemini_rag(query, evidence_snippets, mode=mode)
         if gemini_answer:
-            answer = gemini_answer
-            trace.append("generator: synthesis completed using Gemini API (100% grounded)")
+            if mode == "fallback_confirmed":
+                answer = normalize_fallback_answer(gemini_answer)
+                trace.append("generator: synthesis completed using Gemini API in fallback-confirmed mode")
+            elif is_allowed_normal_mode_answer(gemini_answer, bool(evidence_snippets)):
+                answer = gemini_answer
+                trace.append("generator: synthesis completed using Gemini API (grounding validated)")
+            else:
+                trace.append("generator: rejected Gemini response without valid grounding")
+                gemini_answer = None
+                answer = None
         else:
             # Fallback to local rule-based sentence synthesizer
-            trace.append("generator: no API key found; synthesized via local offline grounded extractor")
-            answer_lines = [
-                "### Grounded Response (Local Offline Mode)",
-                "No active LLM API key detected, but here are the exact verified policy details matching your query:",
-                ""
-            ]
-            for sentence in evidence_sentences:
-                answer_lines.append(f"- {sentence}")
-            answer_lines.append("")
-            answer_lines.append("> [!NOTE]\n> To enable natural language summaries, configure a `GROQ_API_KEY` or `GEMINI_API_KEY` in your `.env` file.")
-            answer = "\n".join(answer_lines)
+            if evidence_sentences:
+                trace.append("generator: no API key found; synthesized via local offline grounded extractor")
+                answer_lines = [
+                    "### Grounded Response (Local Offline Mode)",
+                    "No active LLM API key detected, but here are the exact verified policy details matching your query:",
+                    ""
+                ]
+                for sentence in evidence_sentences:
+                    answer_lines.append(f"- {sentence}")
+                answer_lines.append("")
+                answer_lines.append("> [!NOTE]\n> To enable natural language summaries, configure a `GROQ_API_KEY` or `GEMINI_API_KEY` in your `.env file.")
+                answer = "\n".join(answer_lines)
+            else:
+                trace.append("generator: insufficient retrieved context for a grounded answer")
+                answer = OUT_OF_SCOPE_REFUSAL_MESSAGE
 
     return QueryResult(
         answer=answer,

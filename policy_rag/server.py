@@ -7,12 +7,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .agent import answer_query
-from .config import WEB_DIR
+from .agent import (
+    OUT_OF_SCOPE_REFUSAL_MESSAGE,
+    answer_query,
+    classify_query_scope,
+    is_confirmation_query,
+    route_query,
+)
+from .config import WEB_DIR, allow_out_of_scope_answers, require_fallback_confirmation
 from .index import PageIndex
+from .models import ConversationState, QueryResult
 
 
 INDEX: PageIndex | None = None
+SESSION_STATES: dict[str, ConversationState] = {}
 
 
 def ensure_index() -> PageIndex:
@@ -20,6 +28,14 @@ def ensure_index() -> PageIndex:
     if INDEX is None:
         INDEX = PageIndex.load()
     return INDEX
+
+
+def ensure_session_state(session_id: str) -> ConversationState:
+    state = SESSION_STATES.get(session_id)
+    if state is None:
+        state = ConversationState()
+        SESSION_STATES[session_id] = state
+    return state
 
 
 class PolicyLensHandler(BaseHTTPRequestHandler):
@@ -160,6 +176,8 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     payload = json.loads(raw or "{}")
                     query = str(payload.get("query", "")).strip()
                     file_name = payload.get("file_name")
+                    session_id = str(payload.get("session_id") or "default").strip() or "default"
+                    confirm_fallback = bool(payload.get("confirm_fallback", False))
                     if file_name:
                         file_name = str(file_name).strip()
                 except Exception as exc:
@@ -170,7 +188,78 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     self._send_json({"error": "Query is required"}, status=HTTPStatus.BAD_REQUEST)
                     return
 
-                result = answer_query(ensure_index(), query, file_name=file_name)
+                index = ensure_index()
+                state = ensure_session_state(session_id)
+                route = route_query(query)
+                scope, scope_reasoning = classify_query_scope(query, file_name=file_name)
+                allow_out_of_scope = allow_out_of_scope_answers()
+                fallback_confirmation_required = require_fallback_confirmation()
+                response_meta = {
+                    "session_id": session_id,
+                    "query_scope": scope,
+                    "scope_reasoning": scope_reasoning,
+                    "assistant_mode": "insurance_rag",
+                    "requires_fallback_confirmation": False,
+                    "session_state": state.status,
+                }
+
+                if scope == "out_of_scope" and not allow_out_of_scope:
+                    state.status = "insurance"
+                    state.last_out_of_scope_query = None
+                    result = QueryResult(
+                        answer=OUT_OF_SCOPE_REFUSAL_MESSAGE,
+                        confidence=0.0,
+                        route=route,
+                        sources=[],
+                        trace=["server: refused out-of-scope query before generation"],
+                    )
+                    response_meta.update(
+                        {
+                            "assistant_mode": "insurance_rag",
+                            "requires_fallback_confirmation": False,
+                            "session_state": state.status,
+                        }
+                    )
+                elif scope == "out_of_scope" and fallback_confirmation_required and state.status != "fallback_confirmed" and not (confirm_fallback or is_confirmation_query(query)):
+                    state.status = "awaiting_confirmation"
+                    state.last_out_of_scope_query = query
+                    result = QueryResult(
+                        answer=OUT_OF_SCOPE_REFUSAL_MESSAGE,
+                        confidence=0.0,
+                        route=route,
+                        sources=[],
+                        trace=["server: awaiting fallback confirmation for out-of-scope query"],
+                    )
+                    response_meta.update(
+                        {
+                            "assistant_mode": "insurance_rag",
+                            "requires_fallback_confirmation": True,
+                            "session_state": state.status,
+                        }
+                    )
+                elif scope == "out_of_scope" and (state.status == "fallback_confirmed" or confirm_fallback or is_confirmation_query(query)):
+                    query_to_answer = state.last_out_of_scope_query or query
+                    state.status = "fallback_confirmed"
+                    state.last_out_of_scope_query = None
+                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed")
+                    response_meta.update(
+                        {
+                            "assistant_mode": "fallback_confirmed",
+                            "requires_fallback_confirmation": False,
+                            "session_state": state.status,
+                        }
+                    )
+                else:
+                    state.status = "insurance"
+                    state.last_out_of_scope_query = None
+                    result = answer_query(index, query, file_name=file_name, mode="insurance_rag")
+                    response_meta.update(
+                        {
+                            "assistant_mode": "insurance_rag",
+                            "requires_fallback_confirmation": False,
+                            "session_state": state.status,
+                        }
+                    )
 
                 self._send_json(
                     {
@@ -184,6 +273,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                         },
                         "sources": result.sources,
                         "trace": result.trace,
+                        **response_meta,
                     }
                 )
             except Exception as e:

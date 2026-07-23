@@ -60,6 +60,12 @@ class QueryResult:
 
 
 @dataclass(slots=True)
+class ConversationState:
+    status: str = "insurance"
+    last_out_of_scope_query: str | None = None
+
+
+@dataclass(slots=True)
 class CachedIndex:
     signature: str
     records: list[PageRecord]

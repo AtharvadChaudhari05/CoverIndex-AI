@@ -204,7 +204,19 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     "session_state": state.status,
                 }
 
-                if scope == "out_of_scope" and not allow_out_of_scope:
+                if scope == "out_of_scope" and (state.status == "fallback_confirmed" or confirm_fallback or is_confirmation_query(query)):
+                    query_to_answer = state.last_out_of_scope_query or query
+                    state.status = "fallback_confirmed"
+                    state.last_out_of_scope_query = None
+                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history)
+                    response_meta.update(
+                        {
+                            "assistant_mode": "fallback_confirmed",
+                            "requires_fallback_confirmation": False,
+                            "session_state": state.status,
+                        }
+                    )
+                elif scope == "out_of_scope" and not allow_out_of_scope:
                     state.status = "insurance"
                     state.last_out_of_scope_query = None
                     result = QueryResult(
@@ -221,11 +233,12 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                             "session_state": state.status,
                         }
                     )
-                elif scope == "out_of_scope" and fallback_confirmation_required and state.status != "fallback_confirmed" and not (confirm_fallback or is_confirmation_query(query)):
+                elif scope == "out_of_scope" and fallback_confirmation_required and state.status != "fallback_confirmed":
                     state.status = "awaiting_confirmation"
                     state.last_out_of_scope_query = query
+                    from .agent import INTERNET_SEARCH_PROMPT_MESSAGE, translate_to_user_language
                     result = QueryResult(
-                        answer=OUT_OF_SCOPE_REFUSAL_MESSAGE,
+                        answer=translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, query),
                         confidence=0.0,
                         route=route,
                         sources=[],
@@ -238,26 +251,22 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                             "session_state": state.status,
                         }
                     )
-                elif scope == "out_of_scope" and (state.status == "fallback_confirmed" or confirm_fallback or is_confirmation_query(query)):
-                    query_to_answer = state.last_out_of_scope_query or query
-                    state.status = "fallback_confirmed"
-                    state.last_out_of_scope_query = None
-                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history)
-                    response_meta.update(
-                        {
-                            "assistant_mode": "fallback_confirmed",
-                            "requires_fallback_confirmation": False,
-                            "session_state": state.status,
-                        }
-                    )
                 else:
                     state.status = "insurance"
                     state.last_out_of_scope_query = None
                     result = answer_query(index, query, file_name=file_name, mode="insurance_rag", chat_history=chat_history)
+                    
+                    # If the LLM or fallback synthesizer triggered the internet search prompt, we must await confirmation
+                    requires_fallback = any("insufficient retrieved context" in t or "NO_CONTEXT tag" in t for t in result.trace)
+                    
+                    if requires_fallback:
+                        state.status = "awaiting_confirmation"
+                        state.last_out_of_scope_query = query
+                    
                     response_meta.update(
                         {
                             "assistant_mode": "insurance_rag",
-                            "requires_fallback_confirmation": False,
+                            "requires_fallback_confirmation": requires_fallback,
                             "session_state": state.status,
                         }
                     )

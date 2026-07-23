@@ -58,6 +58,12 @@ INSURANCE_SCOPE_TERMS = [
     "exclusion",
     "waiting period",
     "co-pay",
+    "bike",
+    "car",
+    "vehicle",
+    "two wheeler",
+    "four wheeler",
+    "motorcycle",
     "copay",
     "deductible",
     "policy document",
@@ -206,6 +212,10 @@ ANSWER_CITATION_PATTERN = re.compile(r"\[[^\]]+?\.(?:pdf|zip|txt)\s+p\.?\s*\d+\]
 OUT_OF_SCOPE_REFUSAL_MESSAGE = (
     "I cannot answer questions based on general knowledge. "
     "Please ask me something about your uploaded documents, insurance policies, or claims instead."
+)
+INTERNET_SEARCH_PROMPT_MESSAGE = (
+    "I do not have sufficient information to answer this question. "
+    "Do you want me to look up into some other sources or access the internet?"
 )
 FALLBACK_PREFIX = "This is general information and not based on your uploaded policy documents:"
 
@@ -397,6 +407,25 @@ def translate_to_user_language(text: str, user_query: str) -> str:
         print(f"[CoverIndex AI] Translation failed: {e}")
         return text
 
+def perform_internet_search(query: str) -> list[str]:
+    """Searches the internet using ddgs and returns formatted snippet results."""
+    try:
+        from ddgs import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=3))
+            
+        snippets = []
+        for r in results:
+            snippet = r.get("body", "")
+            href = r.get("href", "")
+            title = r.get("title", "")
+            if snippet and href:
+                snippets.append(f"Source [{href}]: {title} - {snippet}")
+        return snippets
+    except Exception as e:
+        print(f"[CoverIndex AI] Internet search failed: {e}")
+        return []
+
 def answer_query(index: PageIndex, query: str, file_name: str | None = None, mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> QueryResult:
     original_query = query
     search_query = rewrite_query_with_history(query, chat_history)
@@ -503,6 +532,24 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
         trace.append("retriever: no grounded pages found")
         confidence = 0.5
 
+    if mode == "fallback_confirmed":
+        trace.append("generator: fallback confirmed; performing internet search")
+        web_snippets = perform_internet_search(query)
+        if web_snippets:
+            evidence_snippets.extend(web_snippets)
+            for i, snip in enumerate(web_snippets):
+                href_start = snip.find("[") + 1
+                href_end = snip.find("]")
+                href = snip[href_start:href_end] if href_start > 0 and href_end > href_start else "Internet"
+                sources.append({
+                    "citation": href,
+                    "insurer": "Web Search",
+                    "product": "General",
+                    "page_number": i+1,
+                    "score": 1.0,
+                    "snippet": snip,
+                })
+
     # Try Groq generation first
     groq_answer = call_groq_rag(query, evidence_snippets, mode=mode)
     
@@ -548,7 +595,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 answer = "\n".join(answer_lines)
             else:
                 trace.append("generator: insufficient retrieved context for a grounded answer")
-                answer = OUT_OF_SCOPE_REFUSAL_MESSAGE
+                answer = translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, original_query) + " [NO_CONTEXT]"
 
     # Auto-append missing citations if the LLM forgot to include them
     if answer and "[NO_CONTEXT]" in answer:

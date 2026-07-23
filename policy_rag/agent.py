@@ -204,8 +204,8 @@ def is_confirmation_query(query: str) -> bool:
 
 ANSWER_CITATION_PATTERN = re.compile(r"\[[^\]]+?\.(?:pdf|zip|txt)\s+p\.?\s*\d+\]", re.IGNORECASE)
 OUT_OF_SCOPE_REFUSAL_MESSAGE = (
-    "This looks outside my scope as an insurance assistant. "
-    "Could you ask me something about your insurance, policies, or claims instead?"
+    "I cannot answer questions based on general knowledge. "
+    "Please ask me something about your uploaded documents, insurance policies, or claims instead."
 )
 FALLBACK_PREFIX = "This is general information and not based on your uploaded policy documents:"
 
@@ -495,7 +495,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 answer = gemini_answer
                 trace.append("generator: synthesis completed using Gemini API (grounding validated)")
             else:
-                trace.append("generator: rejected Gemini response without valid grounding")
+                trace.append("generator: strict rejection triggered for Gemini API response; falling back to raw context.")
                 gemini_answer = None
                 answer = None
                 
@@ -515,6 +515,14 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
             else:
                 trace.append("generator: insufficient retrieved context for a grounded answer")
                 answer = OUT_OF_SCOPE_REFUSAL_MESSAGE
+
+    # Auto-append missing citations if the LLM forgot to include them
+    if answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and sources and not answer_has_citations(answer):
+        sources_text = "\n\n**Sources:**\n"
+        for s in sources[:3]:  # Top 3 sources
+            sources_text += f"- [{s['citation']}]\n"
+        answer += sources_text
+        trace.append("generator: auto-appended missing citations to the answer")
 
     return QueryResult(
         answer=answer,

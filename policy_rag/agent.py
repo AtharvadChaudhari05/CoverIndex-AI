@@ -423,7 +423,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
 
     # Try Groq generation first
     groq_answer = call_groq_rag(query, evidence_snippets, mode=mode)
-
+    
     if groq_answer:
         if mode == "fallback_confirmed":
             answer = normalize_fallback_answer(groq_answer)
@@ -435,7 +435,8 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
             trace.append("generator: rejected Groq response without valid grounding")
             groq_answer = None
             answer = None
-    else:
+
+    if not groq_answer:
         # Try Gemini generation second
         gemini_answer = call_gemini_rag(query, evidence_snippets, mode=mode)
         if gemini_answer:
@@ -449,19 +450,19 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 trace.append("generator: rejected Gemini response without valid grounding")
                 gemini_answer = None
                 answer = None
-        else:
+                
+        if not gemini_answer:
             # Fallback to local rule-based sentence synthesizer
             if evidence_sentences:
-                trace.append("generator: no API key found; synthesized via local offline grounded extractor")
+                trace.append("generator: no valid API answer; synthesized via local offline grounded extractor")
                 answer_lines = [
-                    "### Grounded Response (Local Offline Mode)",
-                    "No active LLM API key detected, but here are the exact verified policy details matching your query:",
+                    "### Grounded Response (Local Synthesis Mode)",
+                    "I couldn't generate a natural language summary, but here are the exact verified policy details matching your query:",
                     ""
                 ]
                 for sentence in evidence_sentences:
                     answer_lines.append(f"- {sentence}")
                 answer_lines.append("")
-                answer_lines.append("> [!NOTE]\n> To enable natural language summaries, configure a `GROQ_API_KEY` or `GEMINI_API_KEY` in your `.env file.")
                 answer = "\n".join(answer_lines)
             else:
                 trace.append("generator: insufficient retrieved context for a grounded answer")

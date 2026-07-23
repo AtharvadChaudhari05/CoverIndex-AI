@@ -1337,7 +1337,7 @@ async function submitQuery(query) {
       const exactRefusal = "This looks outside my scope as an insurance assistant. Could you ask me something about your insurance, policies, or claims instead?";
       const safeAnswer = payload.query_scope === "out_of_scope"
         ? exactRefusal
-        : payload.answer;
+        : (payload.answer || "I'm sorry, I couldn't generate a valid answer for that query. Please try asking in a different way.");
       updateMessage(loadingId, safeAnswer);
     
     // Add routing info trace to loading bubble footer if active

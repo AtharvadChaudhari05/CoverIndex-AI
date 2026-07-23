@@ -3,8 +3,10 @@
    ========================================== */
 
 // Configure this to point to your Render backend URL once deployed.
-// For local development, leave it as empty string to use relative paths.
-const API_BASE_URL = "";
+// Use relative paths for local development.
+const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
+  ? "" 
+  : "https://coverindex-ai.onrender.com";
 
 // Typing animation items
 const typingSentences = [

@@ -207,6 +207,7 @@ OUT_OF_SCOPE_REFUSAL_MESSAGE = (
     "I cannot answer questions based on general knowledge. "
     "Please ask me something about your uploaded documents, insurance policies, or claims instead."
 )
+INSUFFICIENT_CONTEXT_MESSAGE = "It is not in the provided policy. I cannot answer based on general knowledge."
 FALLBACK_PREFIX = "This is general information and not based on your uploaded policy documents:"
 
 
@@ -223,7 +224,7 @@ def normalize_fallback_answer(answer: str) -> str:
 
 def is_allowed_normal_mode_answer(answer: str, has_evidence: bool) -> bool:
     stripped = answer.strip()
-    if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE:
+    if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE or stripped == INSUFFICIENT_CONTEXT_MESSAGE:
         return True
     # Relax strict citation check to avoid throwing away perfectly valid answers
     if has_evidence:
@@ -517,7 +518,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 answer = OUT_OF_SCOPE_REFUSAL_MESSAGE
 
     # Auto-append missing citations if the LLM forgot to include them
-    if answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and sources and not answer_has_citations(answer):
+    if answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and answer != INSUFFICIENT_CONTEXT_MESSAGE and sources and not answer_has_citations(answer):
         sources_text = "\n\n**Sources:**\n"
         for s in sources[:3]:  # Top 3 sources
             sources_text += f"- [{s['citation']}]\n"

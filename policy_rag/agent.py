@@ -356,7 +356,7 @@ def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | 
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             temperature=0.0,
             max_tokens=60,
         )
@@ -387,7 +387,7 @@ def translate_to_user_language(text: str, user_query: str) -> str:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             temperature=0.0,
             max_tokens=60,
         )

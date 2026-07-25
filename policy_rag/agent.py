@@ -386,7 +386,17 @@ def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | 
             if response.text:
                 return response.text.strip()
         except Exception as e:
-            print(f"[CoverIndex AI] Gemini query rewrite failed: {e}")
+            print(f"[CoverIndex AI] Gemini query rewrite failed: {e}. Trying legacy google-generativeai...")
+
+        try:
+            import google.generativeai as legacy_genai
+            legacy_genai.configure(api_key=gemini_key)
+            model = legacy_genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(f"{system_prompt}\n\n{user_prompt}")
+            if response.text:
+                return response.text.strip()
+        except Exception as e:
+            print(f"[CoverIndex AI] legacy google-generativeai call failed: {e}")
 
     return query
 
@@ -431,7 +441,17 @@ def translate_to_user_language(text: str, user_query: str) -> str:
             if response.text:
                 return response.text.strip()
         except Exception as e:
-            print(f"[CoverIndex AI] Gemini translation failed: {e}")
+            print(f"[CoverIndex AI] Gemini translation failed: {e}. Trying legacy google-generativeai...")
+            
+        try:
+            import google.generativeai as legacy_genai
+            legacy_genai.configure(api_key=gemini_key)
+            model = legacy_genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(f"{system_prompt}\n\n{user_prompt}")
+            if response.text:
+                return response.text.strip()
+        except Exception as e:
+            print(f"[CoverIndex AI] legacy google-generativeai call failed: {e}")
 
     return text
 

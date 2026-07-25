@@ -1227,6 +1227,9 @@ function parseMarkdown(text) {
   // Format headers (### Header)
   html = html.replace(/^### (.*?)$/gm, '<h4 style="font-family:\'Outfit\',sans-serif; font-size:1.15rem; color:var(--text-main); margin:20px 0 8px; font-weight:700;">$1</h4>');
   
+  // Format standard markdown links [text](url)
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" style="color:#3b82f6; text-decoration:underline;">$1</a>');
+
   // Format Bold (**text**)
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 

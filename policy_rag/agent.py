@@ -596,7 +596,10 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
     elif answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and sources and not answer_has_citations(answer):
         sources_text = "\n\n**Sources:**\n"
         for s in sources[:3]:  # Top 3 sources
-            sources_text += f"- [{s['citation']}]\n"
+            if s['citation'].startswith("http"):
+                sources_text += f"- [{s['citation']}]({s['citation']})\n"
+            else:
+                sources_text += f"- [{s['citation']}]\n"
         answer += sources_text
         trace.append("generator: auto-appended missing citations to the answer")
 

@@ -1224,9 +1224,11 @@ function parseMarkdown(text) {
   // Format Bold (**text**)
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-  // Format bullet lists (- item)
-  html = html.replace(/^\- (.*?)$/gm, '<li style="margin-left:14px; margin-bottom:8px; list-style-type:circle; padding-left:4px;">$1</li>');
+  // Format bullet lists (- item or * item)
+  html = html.replace(/^[\-\*]\s+(.*?)$/gm, '<li style="margin-left:14px; margin-bottom:8px; list-style-type:circle; padding-left:4px;">$1</li>');
 
+  // Convert double newlines to paragraph breaks, and single newlines to <br>
+  html = html.replace(/\n\n/g, '<br><br>').replace(/(?<!>)\n(?!<)/g, '<br>');
   // Convert blockquote alerts (> [!WARNING] or > [!NOTE])
   html = html.replace(/&gt;\s*\[\!WARNING\]\s*\n&gt;\s*(.*?)$/gm, '<blockquote style="background-color:#fff7ed; border-left:4px solid #f97316; padding:12px 16px; border-radius:6px; margin:14px 0; color:#c2410c; font-size:0.88rem;"><p>$1</p></blockquote>');
   html = html.replace(/&gt;\s*\[\!NOTE\]\s*\n&gt;\s*(.*?)$/gm, '<blockquote style="background-color:#f0fdf4; border-left:4px solid #22c55e; padding:12px 16px; border-radius:6px; margin:14px 0; color:#15803d; font-size:0.88rem;"><p>$1</p></blockquote>');

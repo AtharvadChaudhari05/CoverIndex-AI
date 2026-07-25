@@ -581,21 +581,8 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 answer = None
                 
         if not gemini_answer:
-            # Fallback to local rule-based sentence synthesizer
-            if evidence_sentences:
-                trace.append("generator: no valid API answer; synthesized via local offline grounded extractor")
-                answer_lines = [
-                    "### Grounded Response (Local Synthesis Mode)",
-                    "I couldn't generate a natural language summary, but here are the exact verified policy details matching your query:",
-                    ""
-                ]
-                for sentence in evidence_sentences:
-                    answer_lines.append(f"- {sentence}")
-                answer_lines.append("")
-                answer = "\n".join(answer_lines)
-            else:
-                trace.append("generator: insufficient retrieved context for a grounded answer")
-                answer = translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, original_query) + " [NO_CONTEXT]"
+            trace.append("generator: insufficient retrieved context for a grounded answer or LLM generation failed")
+            answer = translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, original_query) + " [NO_CONTEXT]"
 
     # Auto-append missing citations if the LLM forgot to include them
     if answer and "[NO_CONTEXT]" in answer:

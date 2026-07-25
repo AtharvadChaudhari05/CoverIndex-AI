@@ -1224,8 +1224,11 @@ function parseMarkdown(text) {
   // Format Bold (**text**)
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-  // Format bullet lists (- item or * item)
-  html = html.replace(/^[\-\*]\s+(.*?)$/gm, '<li style="margin-left:14px; margin-bottom:8px; list-style-type:circle; padding-left:4px;">$1</li>');
+  // Format bullet lists (- item or * item), including indented sub-bullets
+  html = html.replace(/^\s*[\-\*]\s+(.*?)$/gm, '<li style="margin-left:14px; margin-bottom:8px; list-style-type:circle; padding-left:4px;">$1</li>');
+
+  // Remove any newlines or spaces between list items to prevent huge <br> gaps
+  html = html.replace(/<\/li>\s+<li/g, '</li><li');
 
   // Convert double newlines to paragraph breaks, and single newlines to <br>
   html = html.replace(/\n\n/g, '<br><br>').replace(/(?<!>)\n(?!<)/g, '<br>');

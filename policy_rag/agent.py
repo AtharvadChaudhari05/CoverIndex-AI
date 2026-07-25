@@ -335,6 +335,7 @@ def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insura
         if response.text:
             return response.text.strip()
     except Exception as e:
+        print(f"[CoverIndex AI] legacy google-generativeai call failed: {e}")
     return None
 
 

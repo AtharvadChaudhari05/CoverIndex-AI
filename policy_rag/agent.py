@@ -536,12 +536,15 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
         trace.append("generator: fallback confirmed; performing internet search")
         web_snippets = perform_internet_search(query)
         if web_snippets:
-            evidence_snippets.extend(web_snippets)
+            # Prepend web snippets so the LLM sees them first
+            evidence_snippets = web_snippets + evidence_snippets
+            
+            web_sources = []
             for i, snip in enumerate(web_snippets):
                 href_start = snip.find("[") + 1
                 href_end = snip.find("]")
                 href = snip[href_start:href_end] if href_start > 0 and href_end > href_start else "Internet"
-                sources.append({
+                web_sources.append({
                     "citation": href,
                     "insurer": "Web Search",
                     "product": "General",
@@ -549,6 +552,8 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                     "score": 1.0,
                     "snippet": snip,
                 })
+            # Prepend web sources so the auto-appender uses them
+            sources = web_sources + sources
 
     # Try Groq generation first
     groq_answer = call_groq_rag(query, evidence_snippets, mode=mode)

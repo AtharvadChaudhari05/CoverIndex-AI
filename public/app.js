@@ -1218,6 +1218,12 @@ function parseMarkdown(text) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
+  // Convert underline headers (=== or ---) to ### headers
+  html = html.replace(/^(.+)\n[=\-]{3,}\s*$/gm, '### $1');
+  
+  // Strip standalone ASCII dividers
+  html = html.replace(/^[=\-]{3,}\s*$/gm, '');
+
   // Format headers (### Header)
   html = html.replace(/^### (.*?)$/gm, '<h4 style="font-family:\'Outfit\',sans-serif; font-size:1.15rem; color:var(--text-main); margin:20px 0 8px; font-weight:700;">$1</h4>');
   
@@ -1227,11 +1233,6 @@ function parseMarkdown(text) {
   // Format bullet lists (- item or * item), including indented sub-bullets
   html = html.replace(/^\s*[\-\*]\s+(.*?)$/gm, '<li style="margin-left:14px; margin-bottom:8px; list-style-type:circle; padding-left:4px;">$1</li>');
 
-  // Remove any newlines or spaces between list items to prevent huge <br> gaps
-  html = html.replace(/<\/li>\s+<li/g, '</li><li');
-
-  // Convert double newlines to paragraph breaks, and single newlines to <br>
-  html = html.replace(/\n\n/g, '<br><br>').replace(/(?<!>)\n(?!<)/g, '<br>');
   // Convert blockquote alerts (> [!WARNING] or > [!NOTE])
   html = html.replace(/&gt;\s*\[\!WARNING\]\s*\n&gt;\s*(.*?)$/gm, '<blockquote style="background-color:#fff7ed; border-left:4px solid #f97316; padding:12px 16px; border-radius:6px; margin:14px 0; color:#c2410c; font-size:0.88rem;"><p>$1</p></blockquote>');
   html = html.replace(/&gt;\s*\[\!NOTE\]\s*\n&gt;\s*(.*?)$/gm, '<blockquote style="background-color:#f0fdf4; border-left:4px solid #22c55e; padding:12px 16px; border-radius:6px; margin:14px 0; color:#15803d; font-size:0.88rem;"><p>$1</p></blockquote>');
@@ -1244,6 +1245,13 @@ function parseMarkdown(text) {
     const truncatedText = filename.length > 25 ? filename.slice(0, 22) + "..." : filename;
     return `<span class="citation-link" onclick="highlightSource('${citationId}')" title="Click to inspect source text">${truncatedText} p. ${page}</span>`;
   });
+
+  // Remove newlines between HTML tags to prevent <br> gaps between block elements (e.g. </h4>\n\n<li>)
+  html = html.replace(/>\s*\n+\s*</g, '><');
+
+  // Convert double newlines to paragraph breaks, and single newlines to <br>
+  html = html.replace(/\n\n/g, '<br><br>').replace(/(?<!>)\n(?!<)/g, '<br>');
+
   return html;
 }
 

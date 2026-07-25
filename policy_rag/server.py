@@ -204,7 +204,21 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     "session_state": state.status,
                 }
 
-                if scope == "out_of_scope" and not allow_out_of_scope:
+                is_confirm = confirm_fallback or is_confirmation_query(query)
+
+                if state.status == "awaiting_confirmation" and is_confirm:
+                    query_to_answer = state.last_out_of_scope_query or query
+                    state.status = "fallback_confirmed"
+                    state.last_out_of_scope_query = None
+                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history)
+                    response_meta.update(
+                        {
+                            "assistant_mode": "fallback_confirmed",
+                            "requires_fallback_confirmation": False,
+                            "session_state": state.status,
+                        }
+                    )
+                elif scope == "out_of_scope" and not allow_out_of_scope:
                     state.status = "insurance"
                     state.last_out_of_scope_query = None
                     result = QueryResult(
@@ -221,7 +235,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                             "session_state": state.status,
                         }
                     )
-                elif scope == "out_of_scope" and (state.status == "fallback_confirmed" or confirm_fallback or is_confirmation_query(query)):
+                elif scope == "out_of_scope" and (state.status == "fallback_confirmed" or is_confirm):
                     query_to_answer = state.last_out_of_scope_query or query
                     state.status = "fallback_confirmed"
                     state.last_out_of_scope_query = None

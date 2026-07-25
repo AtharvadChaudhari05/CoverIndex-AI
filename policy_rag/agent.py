@@ -335,18 +335,14 @@ def call_gemini_rag(query: str, context_snippets: list[str], mode: str = "insura
         if response.text:
             return response.text.strip()
     except Exception as e:
-        print(f"[CoverIndex AI] legacy google-generativeai call failed: {e}")
-
     return None
 
 
-def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | None = None) -> str:
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return query
-    
-    history_text = ""
-    if chat_history:
+def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | None) -> str:
+    if not chat_history:
+        # For a single query with no history, we still translate it if it's not English
+        history_text = ""
+    else:
         history_text = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in chat_history])
     
     system_prompt = (
@@ -358,6 +354,7 @@ def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | 
     )
     user_prompt = f"Chat History:\n{history_text if history_text else 'None'}\n\nUser Query: {query}\n\nStandalone English Query:"
     
+    api_key = os.getenv("GROQ_API_KEY")
     try:
         from groq import Groq
         client = Groq(api_key=api_key)
@@ -371,17 +368,29 @@ def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | 
             max_tokens=60,
         )
         rewritten = response.choices[0].message.content.strip()
-        return rewritten if rewritten else query
+        if rewritten:
+            return rewritten
     except Exception as e:
-        print(f"[CoverIndex AI] Query rewrite failed: {e}")
-        return query
+        print(f"[CoverIndex AI] Groq query rewrite failed: {e}")
+        
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=f"{system_prompt}\n\n{user_prompt}",
+            )
+            if response.text:
+                return response.text.strip()
+        except Exception as e:
+            print(f"[CoverIndex AI] Gemini query rewrite failed: {e}")
+
+    return query
 
 def translate_to_user_language(text: str, user_query: str) -> str:
-    """Translates the given text into the language of the user_query using Groq."""
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return text
-    
+    """Translates the given text into the language of the user_query using Groq with Gemini fallback."""
     system_prompt = (
         "You are a translation assistant. Your task is to detect the language of the provided 'User Query', "
         "and translate the 'Text to Translate' into that exact same language. "
@@ -389,23 +398,41 @@ def translate_to_user_language(text: str, user_query: str) -> str:
     )
     user_prompt = f"User Query: {user_query}\n\nText to Translate: {text}"
     
-    try:
-        from groq import Groq
-        client = Groq(api_key=api_key)
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            model="llama-3.1-8b-instant",
-            temperature=0.0,
-            max_tokens=60,
-        )
-        translated = response.choices[0].message.content.strip()
-        return translated if translated else text
-    except Exception as e:
-        print(f"[CoverIndex AI] Translation failed: {e}")
-        return text
+    api_key = os.getenv("GROQ_API_KEY")
+    if api_key:
+        try:
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            response = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                model="llama-3.1-8b-instant",
+                temperature=0.0,
+                max_tokens=60,
+            )
+            translated = response.choices[0].message.content.strip()
+            if translated:
+                return translated
+        except Exception as e:
+            print(f"[CoverIndex AI] Groq translation failed: {e}")
+            
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=f"{system_prompt}\n\n{user_prompt}",
+            )
+            if response.text:
+                return response.text.strip()
+        except Exception as e:
+            print(f"[CoverIndex AI] Gemini translation failed: {e}")
+
+    return text
 
 def perform_internet_search(query: str) -> list[str]:
     """Searches the internet using ddgs and returns formatted snippet results."""

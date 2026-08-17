@@ -665,19 +665,8 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 answer = None
                 
         if not gemini_answer:
-            # Only trigger internet search if there were NO evidence snippets at all
-            if evidence_snippets:
-                # We had documents but LLMs refused to answer — force a simple summary
-                trace.append("generator: LLMs refused despite having evidence; constructing answer from snippets")
-                summary_parts = []
-                for s in sources[:3]:
-                    if s.get('snippet'):
-                        summary_parts.append(s['snippet'])
-                answer = "Based on the retrieved policy documents:\n\n" + "\n\n".join(summary_parts) if summary_parts else None
-            
-            if not evidence_snippets or not answer:
-                trace.append("generator: insufficient retrieved context for a grounded answer or LLM generation failed")
-                answer = translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, original_query) + " [NO_CONTEXT]"
+            trace.append("generator: insufficient retrieved context for a grounded answer or LLM returned NO_CONTEXT. Triggering internet search fallback.")
+            answer = translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, original_query) + " [NO_CONTEXT]"
 
     # Auto-append missing citations if the LLM forgot to include them
     if answer and "[NO_CONTEXT]" in answer:

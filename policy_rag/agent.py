@@ -31,6 +31,7 @@ INTENT_RULES = OrderedDict(
         ("rider", ["rider", "waiver of premium", "accidental disability", "health plus"]),
         ("free-look", ["free look", "cooling off", "return the policy", "look period"]),
         ("policy details", ["policy number", "term", "maturity date", "nominee"]),
+        ("advice", ["advice", "suggest", "suggestion", "recommend", "recommendation", "compare", "comparison", "better", "best"]),
     ]
 )
 
@@ -68,6 +69,13 @@ INSURANCE_SCOPE_TERMS = [
     "deductible",
     "policy document",
     "policy pdf",
+    "advice",
+    "suggest",
+    "suggestion",
+    "recommend",
+    "recommendation",
+    "compare",
+    "comparison",
 ]
 
 OUT_OF_SCOPE_TERMS = [
@@ -208,7 +216,14 @@ def is_confirmation_query(query: str) -> bool:
     return cleaned in CONFIRMATION_TERMS
 
 
-ANSWER_CITATION_PATTERN = re.compile(r"\[[^\]]+?\.(?:pdf|zip|txt)\s+p\.?\s*\d+\]", re.IGNORECASE)
+ANSWER_CITATION_PATTERN = re.compile(
+    r"("
+    r"\[[^\]]+?\.(?:pdf|zip|txt)\s+p\.?\s*\d+\]"  # [file.pdf p. 4]
+    r"|[\w._-]+\.(?:pdf|zip|txt)\s*\(?(?:p\.?|Page)\s*\d+\)?"  # file.pdf (Page 4) or file.pdf p. 4
+    r"|https?://"
+    r")",
+    re.IGNORECASE,
+)
 OUT_OF_SCOPE_REFUSAL_MESSAGE = (
     "I cannot answer questions based on general knowledge. "
     "Please ask me something about your uploaded documents, insurance policies, or claims instead."
@@ -233,8 +248,10 @@ def normalize_fallback_answer(answer: str) -> str:
 
 def is_allowed_normal_mode_answer(answer: str, has_evidence: bool) -> bool:
     stripped = answer.strip()
-    if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE or "[NO_CONTEXT]" in stripped:
-        return True
+    if stripped == OUT_OF_SCOPE_REFUSAL_MESSAGE:
+        return True  # Scope classifier already handles refusals before LLM is called
+    if "[NO_CONTEXT]" in stripped:
+        return False
     # Relax strict citation check to avoid throwing away perfectly valid answers
     if has_evidence:
         return True
@@ -262,6 +279,16 @@ def build_rag_messages(query: str, context_snippets: list[str], mode: str = "ins
     return messages
 
 
+def strip_think_tags(text: str) -> str:
+    """Remove Qwen's internal <think>...</think> reasoning blocks from output."""
+    import re
+    # Remove complete <think>...</think> blocks
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    # Safety net: remove unclosed <think> block if closing tag was cut off by max_tokens
+    text = re.sub(r'<think>.*$', '', text, flags=re.DOTALL)
+    return text.strip()
+
+
 def call_groq_rag(query: str, context_snippets: list[str], mode: str = "insurance_rag", chat_history: list[dict[str, str]] | None = None) -> str | None:
     """Calls Groq API using the groq library to generate a response.
     Returns None if no API key is available or the request fails.
@@ -275,28 +302,28 @@ def call_groq_rag(query: str, context_snippets: list[str], mode: str = "insuranc
     try:
         from groq import Groq
         client = Groq(api_key=api_key)
-        # Using llama-3.1-8b-instant
+        # Using openai/gpt-oss-120b (Groq recommended replacement for llama-3.3-70b-versatile)
         completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.0,
-            max_tokens=1024,
+            max_tokens=1500,
         )
         if completion.choices and completion.choices[0].message.content:
-            return completion.choices[0].message.content.strip()
+            return strip_think_tags(completion.choices[0].message.content)
     except Exception as e:
-        print(f"[CoverIndex AI] Groq call failed: {e}. Trying fallback llama-3.3-70b-versatile...")
+        print(f"[CoverIndex AI] Groq call failed: {e}. Trying fallback gpt-oss-120b...")
         try:
             from groq import Groq
             client = Groq(api_key=api_key)
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=messages,
                 temperature=0.0,
-                max_tokens=1024,
+                max_tokens=1500,
             )
             if completion.choices and completion.choices[0].message.content:
-                return completion.choices[0].message.content.strip()
+                return strip_think_tags(completion.choices[0].message.content)
         except Exception as e2:
             print(f"[CoverIndex AI] Groq fallback failed: {e2}")
     return None
@@ -364,11 +391,11 @@ def rewrite_query_with_history(query: str, chat_history: list[dict[str, str]] | 
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-120b",
             temperature=0.0,
-            max_tokens=60,
+            max_tokens=2048,
         )
-        rewritten = response.choices[0].message.content.strip()
+        rewritten = strip_think_tags(response.choices[0].message.content)
         if rewritten:
             return rewritten
     except Exception as e:
@@ -419,11 +446,11 @@ def translate_to_user_language(text: str, user_query: str) -> str:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                model="llama-3.1-8b-instant",
+                model="openai/gpt-oss-120b",
                 temperature=0.0,
-                max_tokens=60,
+                max_tokens=2048,
             )
-            translated = response.choices[0].message.content.strip()
+            translated = strip_think_tags(response.choices[0].message.content)
             if translated:
                 return translated
         except Exception as e:
@@ -516,7 +543,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
         hits = index.search(
             search_query,
             file_name_filter=file_name_filter,
-            top_k=4,
+            top_k=6,
         )
     else:
         # Use routed insurer or product name to filter search
@@ -524,12 +551,12 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
             search_query,
             insurer_filter=route.insurer,
             product_hint=route.product_hint,
-            top_k=4,
+            top_k=6,
         )
 
         if not hits and route.insurer is not None:
             trace.append("no direct match under insurer filter; falling back to broader search")
-            hits = index.search(search_query, product_hint=route.product_hint, top_k=4)
+            hits = index.search(search_query, product_hint=route.product_hint, top_k=2)
 
 
     sources = []
@@ -537,17 +564,21 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
     evidence_sentences: list[str] = []
     
     if hits:
-        max_context_pages = 6 if file_name_filter else 2
+        max_context_pages = 4
         context_hits = index.expanded_context(hits, max_pages=max_context_pages)
         trace.append(f"retriever: selected {len(context_hits)} grounded pages")
 
         seen_sentences: set[str] = set()
         query_tokens = set(tokenize(query))
 
+        # Max 1800 chars per snippet to capture more relevant content while staying within Groq TPM limits
+        MAX_SNIPPET_CHARS = 1800
+
         for hit in context_hits:
             citation = f"{hit.record.source_name} p. {hit.record.page_number}"
             snippet_header = f"--- Source: {hit.record.source_name} (Page {hit.record.page_number}) ---"
-            full_snippet = f"{snippet_header}\n{hit.record.text}"
+            truncated_text = hit.record.text[:MAX_SNIPPET_CHARS]
+            full_snippet = f"{snippet_header}\n{truncated_text}"
             evidence_snippets.append(full_snippet)
 
             sources.append(
@@ -634,22 +665,42 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                 answer = None
                 
         if not gemini_answer:
-            trace.append("generator: insufficient retrieved context for a grounded answer or LLM generation failed")
-            answer = translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, original_query) + " [NO_CONTEXT]"
+            # Only trigger internet search if there were NO evidence snippets at all
+            if evidence_snippets:
+                # We had documents but LLMs refused to answer — force a simple summary
+                trace.append("generator: LLMs refused despite having evidence; constructing answer from snippets")
+                summary_parts = []
+                for s in sources[:3]:
+                    if s.get('snippet'):
+                        summary_parts.append(s['snippet'])
+                answer = "Based on the retrieved policy documents:\n\n" + "\n\n".join(summary_parts) if summary_parts else None
+            
+            if not evidence_snippets or not answer:
+                trace.append("generator: insufficient retrieved context for a grounded answer or LLM generation failed")
+                answer = translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, original_query) + " [NO_CONTEXT]"
 
     # Auto-append missing citations if the LLM forgot to include them
     if answer and "[NO_CONTEXT]" in answer:
         answer = answer.replace("[NO_CONTEXT]", "").strip()
         trace.append("generator: detected NO_CONTEXT tag; skipped appending citations")
-    elif answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and sources and not answer_has_citations(answer):
+    elif answer and answer != OUT_OF_SCOPE_REFUSAL_MESSAGE and sources:
+        has_citations = answer_has_citations(answer)
+        has_sources_section = bool(re.search(r'\*?\*?Sources:\*?\*?', answer, re.IGNORECASE))
+        
+        if has_citations or has_sources_section:
+            # LLM already included sources — strip its version and replace with our clean format
+            answer = re.sub(r'\n+\*?\*?Sources:?\*?\*?[\s\S]*$', '', answer, flags=re.IGNORECASE).strip()
+            trace.append("generator: stripped LLM sources section to replace with clean format")
+        
+        # Always append our properly formatted sources
         sources_text = "\n\n**Sources:**\n"
         for s in sources[:3]:  # Top 3 sources
             if s['citation'].startswith("http"):
                 sources_text += f"- [{s['citation']}]({s['citation']})\n"
             else:
-                sources_text += f"- [{s['citation']}]\n"
+                sources_text += f"- **{s['citation']}**\n"
         answer += sources_text
-        trace.append("generator: auto-appended missing citations to the answer")
+        trace.append("generator: appended clean formatted citations to the answer")
 
     return QueryResult(
         answer=answer,

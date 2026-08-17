@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>CoverIndex AI - Your AI Insurance Assistant</title>
-  <link rel="stylesheet" href="/styles.css?v=3" />
+  <link rel="stylesheet" href="/styles.css?v=7" />
   <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -360,9 +360,10 @@
           </div>
           <div class="search-bar-container">
             <i data-lucide="search"></i>
-            <input type="text" placeholder="Search for 'term insurance IDV'..." />
+            <input type="text" id="chatSearchInput" placeholder="Search for 'term insurance IDV'..." autocomplete="off" />
           </div>
-          <div class="empty-state-card">
+          <div class="search-results-container" id="searchResultsContainer"></div>
+          <div class="empty-state-card" id="searchEmptyState">
             <i data-lucide="inbox"></i>
             <h3>No matching chats found</h3>
             <p>Try searching for a different keyword or start a new chat.</p>
@@ -797,6 +798,13 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="/app.js?v=3"></script>
+  <script src="/app.js?v=7"></script>
 </body>
 </html>
+
+
+
+
+
+
+

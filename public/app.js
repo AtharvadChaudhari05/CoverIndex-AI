@@ -57,6 +57,9 @@ const attachmentFileName = document.getElementById("attachmentFileName");
 const removeAttachmentBtn = document.getElementById("removeAttachmentBtn");
 const voiceLanguageSelect = document.getElementById("voiceLanguageSelect");
 const micBtn = document.querySelector(".mic-btn");
+const chatSearchInput = document.getElementById("chatSearchInput");
+const searchResultsContainer = document.getElementById("searchResultsContainer");
+const searchEmptyState = document.getElementById("searchEmptyState");
 
 let voiceRecognition = null;
 let voiceIsListening = false;
@@ -498,6 +501,99 @@ function setupEventListeners() {
       });
     }
   });
+
+  // Chat Search Functionality
+  if (chatSearchInput && searchResultsContainer && searchEmptyState) {
+    chatSearchInput.addEventListener("input", (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      
+      if (!query) {
+        searchResultsContainer.innerHTML = "";
+        searchEmptyState.style.display = "flex";
+        return;
+      }
+      
+      const matches = chatSessions.filter(session => {
+        const title = session.title || session.name || "";
+        if (title.toLowerCase().includes(query)) return true;
+        
+        // The chat history is saved as an HTML string in session.html
+        if (session.html) {
+          // Create a temporary div to strip HTML tags and just search the raw text content
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = session.html;
+          const textContent = tempDiv.textContent || tempDiv.innerText || "";
+          return textContent.toLowerCase().includes(query);
+        }
+        return false;
+      });
+      
+      if (matches.length === 0) {
+        searchResultsContainer.innerHTML = "";
+        searchEmptyState.style.display = "flex";
+      } else {
+        searchEmptyState.style.display = "none";
+        
+        searchResultsContainer.innerHTML = matches.map(session => {
+          const dateStr = new Date(session.updatedAt || session.id).toLocaleDateString(undefined, { 
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+          });
+          
+          let previewText = "No messages yet";
+          if (session.html) {
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = session.html;
+            
+            // Try to find the last message text
+            const userMessages = Array.from(tempDiv.querySelectorAll('.chat-msg-user .msg-content-text'));
+            const assistantMessages = Array.from(tempDiv.querySelectorAll('.chat-msg-bot .msg-content-text'));
+            
+            // Get the text of whichever is most recent in the DOM
+            const allMessages = Array.from(tempDiv.querySelectorAll('.msg-content-text'));
+            if (allMessages.length > 0) {
+                const lastMsg = allMessages[allMessages.length - 1].textContent || "";
+                previewText = lastMsg.trim().substring(0, 80) + (lastMsg.trim().length > 80 ? "..." : "");
+            }
+          }
+          
+          const title = session.title || session.name || "Untitled Chat";
+          
+          return `
+            <div class="search-result-item" data-session-id="${session.id}">
+              <div class="search-result-icon"><i data-lucide="message-square"></i></div>
+              <div class="search-result-content">
+                <h4>${title}</h4>
+                <p>${previewText}</p>
+                <span class="search-result-date">${dateStr}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        if (window.lucide) lucide.createIcons();
+        
+        // Add click listeners to load the selected session
+        document.querySelectorAll('.search-result-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const sessionId = parseInt(item.getAttribute('data-session-id'), 10);
+            const session = chatSessions.find(s => s.id === sessionId);
+            if (session) {
+              loadChatSession(session);
+              // Switch back to chat view
+              document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+              const navBtn = Array.from(document.querySelectorAll(".nav-item")).find(n => n.querySelector('span').textContent === 'New Chat' || n.id === 'btnNavNewChat');
+              if (navBtn) navBtn.classList.add("active");
+              
+              switchWorkspaceView("chatFeedWindow");
+              chatSearchInput.value = "";
+              searchResultsContainer.innerHTML = "";
+              searchEmptyState.style.display = "flex";
+            }
+          });
+        });
+      }
+    });
+  }
 
   const viewArchivedBtn = document.querySelector(".view-archived");
   if (viewArchivedBtn) {

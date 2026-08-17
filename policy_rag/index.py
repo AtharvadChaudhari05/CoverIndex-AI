@@ -142,16 +142,16 @@ class PageIndex:
         boost = 0.0
 
         if record.insurer != "Unknown Insurer" and record.insurer.lower() in lowered:
-            boost += 4.0
+            boost += 2.0
 
         if "hdfc" in lowered and "hdfc" in record.insurer.lower():
-            boost += 3.0
+            boost += 1.5
 
         if product_hint:
             record_blob = f"{record.title} {record.product} {record.file_name}".lower()
             hint_tokens = tokenize(product_hint)
             if hint_tokens and any(token in record_blob for token in hint_tokens):
-                boost += 3.0
+                boost += 2.0
 
         file_blob = f"{record.title} {record.product} {record.file_name}".lower()
         if "policy bond" in lowered and "policy bond" in file_blob:
@@ -165,6 +165,10 @@ class PageIndex:
         for term in tokenize(query):
             if term in title_blob:
                 boost += 0.45
+
+        # Penalize page 1 (usually cover page with headers/footers, not actual content)
+        if record.page_number == 1:
+            boost -= 2.0
 
         return boost
 

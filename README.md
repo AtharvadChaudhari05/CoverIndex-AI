@@ -1,4 +1,5 @@
-# RAG Based AI Insurance Query and Recommendation System 🛡️
+# CoverIndex AI
+## RAG Based AI Insurance Query and Recommendation System 🛡️
 
 **Your Personal Explainable AI Insurance Advisor**
 

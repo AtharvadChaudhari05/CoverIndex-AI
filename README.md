@@ -78,7 +78,7 @@ If you want to run this project on your own computer instead of the live website
 ## 🌍 Live Deployment
 
 This project is fully deployed and live on the internet! 
-You can test the final version here: **[https://coverindex-ai.onrender.com](https://coverindex-ai.onrender.com)**
+You can test the final version here: **[https://coverindexai.atharvadc05.workers.dev/](https://coverindexai.atharvadc05.workers.dev/)**
 
 ### Deployment Architecture
 - **Backend (Render):** The Python RAG engine and API are hosted on Render as a Web Service. It automatically pulls from the `main` branch of this GitHub repository, securely injects our API keys from the Render dashboard environment, installs the Python dependencies, and starts the server.

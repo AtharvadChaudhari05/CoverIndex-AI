@@ -1,4 +1,4 @@
-# CoverIndex AI 🛡️
+# RAG Based AI Insurance Query and Recommendation System 🛡️
 
 **Your Personal Explainable AI Insurance Advisor**
 
@@ -71,3 +71,15 @@ If you want to run this project on your own computer instead of the live website
    python app.py
    ```
 3. **Open the App:** Open your web browser and go to `http://localhost:8000`. You're ready to chat!
+
+---
+
+## 🌍 Live Deployment
+
+This project is fully deployed and live on the internet! 
+You can test the final version here: **[https://coverindex-ai.onrender.com](https://coverindex-ai.onrender.com)**
+
+### Deployment Architecture
+- **Backend (Render):** The Python RAG engine and API are hosted on Render as a Web Service. It automatically pulls from the `main` branch of this GitHub repository, securely injects our API keys from the Render dashboard environment, installs the Python dependencies, and starts the server.
+- **Frontend (Cloudflare):** The HTML, CSS, and JS files are deployed globally using Cloudflare Pages.
+- **Continuous Integration (CI):** Every time new code is pushed to this GitHub repository, both Render and Cloudflare automatically detect the changes and redeploy the live site within minutes, ensuring the production app is always up to date.

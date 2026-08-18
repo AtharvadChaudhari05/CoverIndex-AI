@@ -1,5 +1,5 @@
 # CoverIndex AI
-## RAG Based AI Insurance Query and Recommendation System 🛡️
+## RAG Based AI Insurance Query and Recommendation System
 
 **Your Personal Explainable AI Insurance Advisor**
 
@@ -43,19 +43,32 @@ When you ask CoverIndex AI a question, here is what happens behind the scenes in
 
 ## 📁 File Structure
 
-Here is how the code is organized:
+Here is a detailed breakdown of how the repository is organized:
 
-- **`/public`**: The Frontend. This folder contains the face of the application. 
-  - `index.html`: The structure of the website.
-  - `styles.css`: All the beautiful colors, glassmorphism effects, and animations.
-  - `app.js`: The brain of the website (handles sending messages, saving chat history, and searching old chats).
-- **`/policy_rag`**: The Backend (Python). This is the engine room.
-  - `server.py`: The web server that receives messages from the frontend and sends back answers.
-  - `agent.py`: The AI logic. It decides if a query is insurance-related, searches the documents, talks to Groq/Gemini, and handles the Internet fallback.
-  - `index.py`: The system that chops PDFs into pages and creates our custom search index.
-- **`/prompts`**: The instruction manuals for the AI. This contains the strict rules (like the 3-stage recommendation format) that tell the AI how to behave.
-- **`/Policy Documents`**: The folder where you drop all the raw insurance PDFs you want the AI to learn.
-- **`worker.js`**: The Cloudflare configuration that helps deploy our frontend to the global edge network.
+### 🖥️ Frontend (User Interface)
+- **`/public`**: Contains the entire client-side web application.
+  - `index.html`: The structural backbone of the app. It defines the chat window, the sidebar for history, and the search bar layout.
+  - `styles.css`: The design system. Contains all styling rules for the dark-mode theme, glassmorphism effects, responsive mobile design, and smooth CSS animations.
+  - `app.js`: The frontend logic. Handles taking user input, sending it to the backend, updating the chat UI, saving conversations to browser LocalStorage, and running the "Search History" function.
+
+### ⚙️ Backend (Python Engine)
+- **`/policy_rag`**: The core RAG (Retrieval-Augmented Generation) engine.
+  - `server.py`: A lightweight web server (using FastAPI or similar) that receives chat requests from `app.js` and sends back the AI's answers.
+  - `agent.py`: The "Brain". This file contains the logic that routes your query, talks to the AI models (Groq/Gemini), formats the output, and triggers the Internet Search if the PDFs don't have the answer.
+  - `index.py`: The Document Processor. It reads the raw PDFs, slices them into pages, and builds our custom Vectorless Search Index so the AI can instantly find the right page.
+  - `config.py`: Handles loading environment variables securely (like API keys).
+  - `utils.py`: Contains helper tools, including the actual code that performs live DuckDuckGo internet searches.
+
+### 🧠 AI Instructions & Data
+- **`/prompts`**: Contains the strict system instruction manuals for the AI.
+  - `system_prompt_insurance_rag.md`: Forces the AI to only answer from the documents, use the 3-stage layout for advice, and output `[NO_CONTEXT]` when it doesn't know the answer.
+  - `system_prompt_fallback_confirmed.md`: The rules the AI follows when it is using live Internet Search data.
+- **`/Policy Documents`**: The folder where you place all the raw insurance PDF files you want the system to learn.
+- **`/cache`**: A temporary folder where the system saves the processed document index so it doesn't have to re-read the PDFs every time it starts up.
+
+### 🌍 Deployment Configurations
+- **`worker.js`**: The Cloudflare configuration script that deploys the frontend globally to edge servers.
+- **`render.yaml`**: (If present) The configuration used by Render to automatically build and host the Python backend.
 
 ---
 

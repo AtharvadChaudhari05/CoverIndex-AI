@@ -39,3 +39,9 @@ capstone_overleaf.pdf
 
 # Local deploy helpers
 tmp/
+
+.dist/
+.venv/
+.vscode/
+.wrangler/
+

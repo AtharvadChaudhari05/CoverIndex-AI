@@ -264,6 +264,12 @@
           <span class="active-chat-title" id="chatSessionTitle">New Chat</span>
         </div>
         <div class="header-right">
+          <!-- Daily question limit -->
+          <div class="request-quota" id="requestQuota" hidden title="Questions and PDF uploads count toward a daily limit.">
+            <i data-lucide="message-circle"></i>
+            <span id="requestQuotaText"></span>
+            <span class="request-quota-bar"><span id="requestQuotaFill"></span></span>
+          </div>
           <!-- Ready status badge -->
           <div class="index-badge">
             <span class="pulse-dot"></span>
@@ -761,7 +767,6 @@
           <button type="button" class="composer-action-btn mic-btn" title="Voice Search"><i data-lucide="mic"></i></button>
           <button type="submit" class="composer-send-btn" id="composerSendBtn"><i data-lucide="arrow-up"></i></button>
         </form>
-        <div class="composer-subtext" id="requestsRemainingText"></div>
       </footer>
     </main>
 

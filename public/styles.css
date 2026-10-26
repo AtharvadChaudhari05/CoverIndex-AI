@@ -1744,6 +1744,74 @@ body.inspector-open .mobile-backdrop {
   height: 18px;
 }
 
+.composer-send-btn:disabled,
+.composer-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.request-quota {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: white;
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.request-quota[hidden] {
+  display: none;
+}
+
+.request-quota svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.request-quota-bar {
+  width: 64px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border-color);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.request-quota-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-blue);
+  transition: width 0.3s ease;
+}
+
+.request-quota.is-low {
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.4);
+  background: #fffbeb;
+}
+
+.request-quota.is-low .request-quota-bar span {
+  background: #f59e0b;
+}
+
+.request-quota.is-empty {
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: #fef2f2;
+}
+
+.request-quota.is-empty .request-quota-bar {
+  display: none;
+}
+
 .composer-subtext {
   text-align: center;
   font-size: 0.72rem;
@@ -2977,9 +3045,14 @@ body.inspector-open .mobile-backdrop {
   }
 
   .index-badge,
-  .upload-badge-btn {
+  .upload-badge-btn,
+  .request-quota {
     font-size: 0.72rem;
     padding: 5px 10px;
+  }
+
+  .request-quota-bar {
+    display: none;
   }
 
   .welcome-screen {

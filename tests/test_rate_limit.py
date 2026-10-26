@@ -55,6 +55,14 @@ class RateLimiterTests(unittest.TestCase):
         self.assertEqual(limiter.remaining("ip"), 2)
         self.assertEqual(limiter.remaining("ip"), 2)
 
+    def test_retry_after_reports_reset_time(self) -> None:
+        clock = FakeClock()
+        limiter = RateLimiter(limit=1, window_seconds=60, clock=clock)
+        self.assertEqual(limiter.retry_after("ip"), 0)
+        limiter.consume("ip")
+        clock.now += 20
+        self.assertEqual(limiter.retry_after("ip"), 41)
+
     def test_zero_limit_disables(self) -> None:
         limiter = RateLimiter(limit=0, window_seconds=60, clock=FakeClock())
         self.assertTrue(all(limiter.consume("ip")[0] for _ in range(100)))

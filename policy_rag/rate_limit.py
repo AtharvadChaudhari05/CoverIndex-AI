@@ -54,6 +54,17 @@ class RateLimiter:
             self._requests[key] = timestamps
             return True, self.limit - len(timestamps), 0
 
+    def retry_after(self, key: str) -> int:
+        """Seconds until this key may send another request; 0 when it may send one now."""
+        if not self.enabled:
+            return 0
+        with self._lock:
+            now = self._clock()
+            timestamps = self._prune(key, now)
+            if len(timestamps) < self.limit:
+                return 0
+            return int(timestamps[0] + self.window_seconds - now) + 1
+
     def remaining(self, key: str) -> int:
         if not self.enabled:
             return -1

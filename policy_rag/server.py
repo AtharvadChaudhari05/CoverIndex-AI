@@ -74,6 +74,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     "signature": ensure_index().signature,
                     "request_limit": REQUEST_LIMITER.limit,
                     "requests_remaining": REQUEST_LIMITER.remaining(self._client_ip()),
+                    "retry_after_seconds": REQUEST_LIMITER.retry_after(self._client_ip()),
                 }
             )
             return
@@ -182,6 +183,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     "total_documents": index.document_count,
                     "request_limit": REQUEST_LIMITER.limit,
                     "requests_remaining": requests_remaining,
+                    "retry_after_seconds": REQUEST_LIMITER.retry_after(self._client_ip()) if requests_remaining == 0 else 0,
                 })
             except Exception as e:
                 self._send_json({"error": f"Upload processing failed: {str(e)}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -241,6 +243,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 response_meta = {
                     "request_limit": REQUEST_LIMITER.limit,
                     "requests_remaining": requests_remaining,
+                    "retry_after_seconds": REQUEST_LIMITER.retry_after(self._client_ip()) if requests_remaining == 0 else 0,
                     "session_id": session_id,
                     "query_scope": scope,
                     "scope_reasoning": scope_reasoning,

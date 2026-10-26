@@ -57,7 +57,9 @@ const attachmentFileName = document.getElementById("attachmentFileName");
 const removeAttachmentBtn = document.getElementById("removeAttachmentBtn");
 const voiceLanguageSelect = document.getElementById("voiceLanguageSelect");
 const answerLanguageSelect = document.getElementById("answerLanguageSelect");
-const requestsRemainingText = document.getElementById("requestsRemainingText");
+const requestQuota = document.getElementById("requestQuota");
+const requestQuotaText = document.getElementById("requestQuotaText");
+const requestQuotaFill = document.getElementById("requestQuotaFill");
 const micBtn = document.querySelector(".mic-btn");
 const chatSearchInput = document.getElementById("chatSearchInput");
 const searchResultsContainer = document.getElementById("searchResultsContainer");
@@ -587,11 +589,59 @@ function enterDashboard(mode = "") {
 
 // Check index status
 // Daily request limit: questions and PDF uploads count; the server sends the remaining count
+const QUOTA_LOW_THRESHOLD = 5;
+const defaultComposerPlaceholder = composerInput ? composerInput.placeholder : "";
+let quotaExhausted = false;
+let quotaLowWarned = false;
+
+function formatWaitTime(seconds) {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`;
+}
+
 function updateRequestsRemaining(payload) {
-  if (!requestsRemainingText || !payload) return;
-  const { requests_remaining: remaining, request_limit: limit } = payload;
+  if (!requestQuota || !payload) return;
+  const { requests_remaining: remaining, request_limit: limit, retry_after_seconds: retryAfter } = payload;
   if (typeof remaining !== "number" || typeof limit !== "number" || limit <= 0) return;
-  requestsRemainingText.textContent = `${remaining} of ${limit} requests left today`;
+
+  requestQuota.hidden = false;
+  requestQuota.classList.toggle("is-low", remaining > 0 && remaining <= QUOTA_LOW_THRESHOLD);
+  requestQuota.classList.toggle("is-empty", remaining === 0);
+  requestQuotaFill.style.width = `${Math.round((remaining / limit) * 100)}%`;
+
+  if (remaining === 0) {
+    const reset = retryAfter ? ` · resets in ${formatWaitTime(retryAfter)}` : "";
+    requestQuotaText.textContent = `Daily limit reached${reset}`;
+  } else if (remaining <= QUOTA_LOW_THRESHOLD) {
+    requestQuotaText.textContent = `Only ${remaining} of ${limit} questions left today`;
+  } else {
+    requestQuotaText.textContent = `${remaining} of ${limit} questions left today`;
+  }
+
+  if (remaining > 0 && remaining <= QUOTA_LOW_THRESHOLD && !quotaLowWarned) {
+    quotaLowWarned = true;
+    showToast(`Only ${remaining} questions left today.`, "info");
+  }
+
+  quotaExhausted = remaining === 0;
+  applyQuotaLock();
+}
+
+// When the limit is reached, lock the composer so the user cannot send requests that would fail
+function applyQuotaLock() {
+  if (!composerInput) return;
+  if (quotaExhausted) {
+    composerInput.disabled = true;
+    composerSendBtn.disabled = true;
+    if (attachmentBtn) attachmentBtn.disabled = true;
+    composerInput.placeholder = "Daily limit reached. Please come back later.";
+  } else if (composerInput.placeholder !== defaultComposerPlaceholder) {
+    composerInput.disabled = false;
+    composerSendBtn.disabled = false;
+    if (attachmentBtn) attachmentBtn.disabled = false;
+    composerInput.placeholder = defaultComposerPlaceholder;
+  }
 }
 
 async function loadIndexStatus() {
@@ -1648,6 +1698,7 @@ async function submitQuery(query) {
         composerSendBtn.disabled = false;
         composerSendBtn.innerHTML = `<i data-lucide="arrow-up"></i>`;
         if (window.lucide) lucide.createIcons();
+        applyQuotaLock();
         return;
       }
     }
@@ -1732,6 +1783,7 @@ async function submitQuery(query) {
     composerInput.value = "";
     composerInput.focus();
     if (window.lucide) lucide.createIcons();
+    applyQuotaLock();
   }
 }
 

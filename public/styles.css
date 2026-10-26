@@ -1710,6 +1710,7 @@ body.inspector-open .mobile-backdrop {
 
 .chat-composer input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -2532,6 +2533,37 @@ body.inspector-open .mobile-backdrop {
   box-shadow: 0 0 0 4px rgba(77, 55, 236, 0.08);
 }
 
+.answer-language-inline {
+  max-width: 148px;
+}
+
+.speak-answer-btn {
+  margin-top: 6px;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.speak-answer-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.speak-answer-btn:hover,
+.speak-answer-btn.is-speaking {
+  color: var(--primary-purple);
+  border-color: var(--primary-purple-border);
+  background-color: var(--primary-purple-light);
+}
+
 .faq-card {
   background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
 }
@@ -3207,6 +3239,11 @@ body.inspector-open .mobile-backdrop {
   .composer-action-btn {
     width: 34px;
     height: 34px;
+  }
+
+  .voice-language-inline {
+    max-width: 84px;
+    padding-right: 22px;
   }
 
   .attachment-preview-pill .attachment-file-name {

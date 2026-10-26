@@ -49,7 +49,7 @@ def source_signature(source: Path) -> str:
         for path in sorted(source.rglob("*")):
             if path.is_file():
                 stat = path.stat()
-                hasher.update(str(path.relative_to(source)).replace("\\", "/").encode("utf-8"))
+                hasher.update(path.relative_to(source).as_posix().encode("utf-8"))
                 hasher.update(str(stat.st_size).encode("utf-8"))
     else:
         stat = source.stat()

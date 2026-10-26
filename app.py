@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 try:
     from dotenv import load_dotenv
 except ImportError:  # pragma: no cover - optional in bundled test/runtime environments

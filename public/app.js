@@ -56,6 +56,7 @@ const attachmentPreviewBar = document.getElementById("attachmentPreviewBar");
 const attachmentFileName = document.getElementById("attachmentFileName");
 const removeAttachmentBtn = document.getElementById("removeAttachmentBtn");
 const voiceLanguageSelect = document.getElementById("voiceLanguageSelect");
+const answerLanguageSelect = document.getElementById("answerLanguageSelect");
 const micBtn = document.querySelector(".mic-btn");
 const chatSearchInput = document.getElementById("chatSearchInput");
 const searchResultsContainer = document.getElementById("searchResultsContainer");
@@ -106,6 +107,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initVoiceSupport();
   setupEventListeners();
   initVoiceLanguagePreference();
+  initAnswerLanguagePreference();
+  initReadAloud();
   initChatSessions();
   loadIndexStatus();
   loadIndexedPolicies();
@@ -320,6 +323,227 @@ function getVoiceLanguageLabel(languageCode) {
     "bn-IN": "Bengali",
   };
   return languageMap[languageCode] || languageCode;
+}
+
+function initAnswerLanguagePreference() {
+  if (!answerLanguageSelect) return;
+
+  const storedValue = localStorage.getItem("coverindex-answer-language");
+  if (storedValue) {
+    answerLanguageSelect.value = storedValue;
+  }
+
+  answerLanguageSelect.addEventListener("change", () => {
+    localStorage.setItem("coverindex-answer-language", answerLanguageSelect.value);
+  });
+}
+
+function getAnswerLanguage() {
+  return answerLanguageSelect?.value || "auto";
+}
+
+// Read aloud: speaker button on each assistant answer. Plays natural server voices from /api/tts,
+// and falls back to the browser's speechSynthesis when the server has no TTS configured.
+const SERVER_TTS_CHUNK_CHARS = 1200;
+let activeSpeakButton = null;
+let activeAudio = null;
+// Bumped on every stop, so audio still loading for a stopped answer is dropped
+let speechSession = 0;
+
+function initReadAloud() {
+  // Chrome loads voices asynchronously; ask early so the list is ready by the first click
+  if ("speechSynthesis" in window) window.speechSynthesis.getVoices();
+
+  // Sessions are restored from saved HTML, so listen on the container instead of on each button
+  chatHistory.addEventListener("click", (event) => {
+    const button = event.target.closest(".speak-answer-btn");
+    if (button) toggleReadAloud(button);
+  });
+}
+
+function getSpeechLanguage(text) {
+  const answerLanguage = getAnswerLanguage();
+  if (answerLanguage !== "auto") return `${answerLanguage}-IN`;
+
+  if (/[\u0980-\u09FF]/.test(text)) return "bn-IN";
+  if (/[\u0B80-\u0BFF]/.test(text)) return "ta-IN";
+  if (/[\u0C00-\u0C7F]/.test(text)) return "te-IN";
+  if (/[\u0900-\u097F]/.test(text)) {
+    // Hindi and Marathi share the Devanagari script; follow the voice input choice
+    return getVoiceRecognitionLanguage() === "mr-IN" ? "mr-IN" : "hi-IN";
+  }
+  return "en-IN";
+}
+
+function addReadAloudButton(msgId, text) {
+  const msgRow = document.getElementById(msgId);
+  if (!msgRow || msgRow.querySelector(".speak-answer-btn")) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "speak-answer-btn";
+  button.title = "Read aloud";
+  button.setAttribute("aria-label", "Read answer aloud");
+  button.dataset.lang = getSpeechLanguage(text);
+  button.innerHTML = `<i data-lucide="volume-2"></i>`;
+  msgRow.appendChild(button);
+
+  if (window.lucide) lucide.createIcons();
+  persistActiveSession();
+}
+
+function getSpeakableText(msgRow) {
+  const container = msgRow.querySelector(".assistant-text-container");
+  if (!container) return "";
+  // Do not read the metadata footer, the sources list, or internal markers
+  const copy = container.cloneNode(true);
+  copy.querySelectorAll(".message-meta").forEach((el) => el.remove());
+  let text = copy.innerText || copy.textContent || "";
+  const sourcesIndex = text.lastIndexOf("Sources:");
+  if (sourcesIndex !== -1) text = text.slice(0, sourcesIndex);
+  text = text.replace(/\[NO_CONTEXT\]/g, "");
+  text = text.replace(/\S+\.(?:pdf|zip|txt)\s+p\.\s*\d+/gi, "");
+  return text.trim();
+}
+
+function splitForSpeech(text, maxChars) {
+  // Speak sentence-sized chunks: browsers stop long utterances early, and the TTS API caps request size
+  const sentences = text.match(/[^.!?।\n]+[.!?।]?/g) || [];
+  const chunks = [];
+  let current = "";
+  for (let sentence of sentences) {
+    while (sentence.length > maxChars) {
+      chunks.push(sentence.slice(0, maxChars).trim());
+      sentence = sentence.slice(maxChars);
+    }
+    if ((current + sentence).length > maxChars && current) {
+      chunks.push(current.trim());
+      current = "";
+    }
+    current += sentence + " ";
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.filter(Boolean);
+}
+
+function setSpeakButtonState(button, speaking) {
+  button.classList.toggle("is-speaking", speaking);
+  button.innerHTML = `<i data-lucide="${speaking ? "square" : "volume-2"}"></i>`;
+  if (window.lucide) lucide.createIcons();
+}
+
+function stopReadAloud() {
+  speechSession++;
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio = null;
+  }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  if (activeSpeakButton) setSpeakButtonState(activeSpeakButton, false);
+  activeSpeakButton = null;
+}
+
+async function toggleReadAloud(button) {
+  const wasActive = activeSpeakButton === button;
+  stopReadAloud();
+  if (wasActive) return;
+
+  const text = getSpeakableText(button.closest(".message-bubble-row"));
+  if (!text) return;
+  const lang = button.dataset.lang || "en-IN";
+
+  activeSpeakButton = button;
+  setSpeakButtonState(button, true);
+  const session = speechSession;
+
+  const result = await speakWithServer(text, lang, session);
+  if (session !== speechSession) return;
+  if (result === "unavailable") {
+    speakWithBrowser(button, text, lang);
+    return;
+  }
+  if (result === "failed") showToast("Could not play the answer audio. Please try again.", "volume-x");
+  stopReadAloud();
+}
+
+function fetchSpeechChunk(text, lang) {
+  return fetch(`${API_BASE_URL}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, language: lang }),
+  })
+    .then(async (response) => {
+      if (response.status === 503) return "unavailable";
+      if (!response.ok) return "failed";
+      return URL.createObjectURL(await response.blob());
+    })
+    .catch(() => "failed");
+}
+
+async function speakWithServer(text, lang, session) {
+  const chunks = splitForSpeech(text, SERVER_TTS_CHUNK_CHARS);
+  let nextChunk = fetchSpeechChunk(chunks[0], lang);
+
+  for (let i = 0; i < chunks.length; i++) {
+    const audioUrl = await nextChunk;
+    if (session !== speechSession) return "stopped";
+    if (audioUrl === "unavailable") return i === 0 ? "unavailable" : "failed";
+    if (audioUrl === "failed") return "failed";
+
+    // Fetch the next chunk while this one plays
+    nextChunk = i + 1 < chunks.length ? fetchSpeechChunk(chunks[i + 1], lang) : null;
+    const played = await playAudio(audioUrl, session);
+    URL.revokeObjectURL(audioUrl);
+    if (!played) return session === speechSession ? "failed" : "stopped";
+  }
+  return "done";
+}
+
+function playAudio(url, session) {
+  return new Promise((resolve) => {
+    const audio = new Audio(url);
+    activeAudio = audio;
+    audio.onended = () => resolve(true);
+    audio.onerror = () => resolve(false);
+    audio.onpause = () => {
+      if (session !== speechSession) resolve(false);
+    };
+    audio.play().catch(() => resolve(false));
+  });
+}
+
+function speakWithBrowser(button, text, lang) {
+  const voices = "speechSynthesis" in window ? window.speechSynthesis.getVoices() : [];
+  const langPrefix = lang.split("-")[0];
+  const voice = voices.find((v) => v.lang.replace("_", "-") === lang) ||
+    voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix));
+  if (!voices.length) {
+    // Common on Linux when no speech engine (e.g. speech-dispatcher) is installed
+    showToast("No text-to-speech voices found in this browser.", "volume-x");
+    stopReadAloud();
+    return;
+  }
+  if (!voice) {
+    showToast(`No ${getVoiceLanguageLabel(lang)} voice installed in this browser.`, "volume-x");
+    stopReadAloud();
+    return;
+  }
+
+  const chunks = splitForSpeech(text, 200);
+  chunks.forEach((chunk, index) => {
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.lang = lang;
+    utterance.voice = voice;
+    if (index === chunks.length - 1) {
+      utterance.onend = () => {
+        if (activeSpeakButton === button) stopReadAloud();
+      };
+    }
+    utterance.onerror = () => {
+      if (activeSpeakButton === button) stopReadAloud();
+    };
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 function isMobileVoiceEnvironment() {
@@ -1356,6 +1580,7 @@ function parseMarkdown(text) {
 
 // Client query submission
 async function submitQuery(query) {
+  stopReadAloud();
   // Set composer disabled/loading
   composerInput.disabled = true;
   composerSendBtn.disabled = true;
@@ -1452,6 +1677,7 @@ async function submitQuery(query) {
         file_name: askFileName,
         session_id: activeSessionId,
         chat_history: chatHistory,
+        answer_language: getAnswerLanguage(),
       })
     });
     const payload = await response.json();
@@ -1462,9 +1688,11 @@ async function submitQuery(query) {
       // Render answer
       const safeAnswer = payload.answer || "I'm sorry, I couldn't generate a valid answer for that query. Please try asking in a different way.";
       updateMessage(loadingId, safeAnswer);
+      addReadAloudButton(loadingId, safeAnswer);
     
     // Add routing info trace to loading bubble footer if active
-    if (payload.route || payload.confidence) {
+    // Small talk and replies about an earlier answer have no routing or grounding to show
+    if ((payload.route || payload.confidence) && payload.assistant_mode !== "conversational") {
       appendMetadataFooter(loadingId, payload.route, payload.confidence);
     }
 

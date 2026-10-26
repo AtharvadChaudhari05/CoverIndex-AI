@@ -95,7 +95,7 @@ class PromptGuardrailTests(unittest.TestCase):
 
     def test_config_flags_default_off_or_on(self) -> None:
         self.assertFalse(allow_out_of_scope_answers())
-        self.assertTrue(require_fallback_confirmation())
+        self.assertFalse(require_fallback_confirmation())
         self.assertTrue(env_flag("NON_EXISTENT_FLAG", default=True))
         self.assertFalse(env_flag("NON_EXISTENT_FLAG", default=False))
 

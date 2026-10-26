@@ -170,3 +170,46 @@ def choose_title_from_text(text: str, fallback: str) -> str:
 def top_terms(text: str, limit: int = 12) -> list[str]:
     counts = token_counts(text)
     return [term for term, _ in counts.most_common(limit)]
+
+
+SCRIPT_RANGES = [
+    ("deva", re.compile(r"[ऀ-ॿ]")),  # Hindi, Marathi
+    ("bn", re.compile(r"[ঀ-৿]")),
+    ("ta", re.compile(r"[஀-௿]")),
+    ("te", re.compile(r"[ఀ-౿]")),
+]
+
+
+# Common romanized Hindi/Marathi words. Plain ASCII queries containing them still need the LLM rewrite.
+ROMANIZED_INDIC_WORDS = {
+    "kya", "kaise", "kaun", "kitna", "kitne", "mein", "mera", "meri", "mere", "hai", "hain",
+    "nahi", "kab", "aur", "ka", "ki", "ke", "ko", "se", "bhi", "chahiye", "milega",
+    "ahe", "aahe", "kay", "majha", "majhi", "mala", "kasa", "kashi", "pahije",
+}
+
+
+def detect_script_language(text: str) -> str | None:
+    """Cheap script check: returns "en" for plain Latin text, a script/language code
+    for a known Indic script, or None when the script is unknown (let the LLM decide)."""
+    for code, pattern in SCRIPT_RANGES:
+        if pattern.search(text):
+            return code
+    if all(ord(ch) < 128 for ch in text):
+        words = set(re.findall(r"[a-z]+", text.lower()))
+        if words & ROMANIZED_INDIC_WORDS:
+            return None
+        return "en"
+    return None
+
+
+MARATHI_WORDS = {"आहे", "आहेत", "नाही", "आणि", "काय", "मला", "तुम्ही", "तुमच्या", "माझ्या", "कसे", "करा", "सांगा", "मध्ये", "होते", "केले", "पण"}
+HINDI_WORDS = {"है", "हैं", "नहीं", "और", "क्या", "मुझे", "आप", "आपके", "मेरे", "कैसे", "करें", "बताओ", "बताइए", "में", "के", "की", "का", "था", "लेकिन"}
+
+
+def guess_devanagari_language(text: str) -> str:
+    """Tells Hindi from Marathi by common function words; the letter ळ is frequent in Marathi only.
+    Returns "hi" on a tie, since Hindi is the more common of the two."""
+    words = re.findall(r"[ऀ-ॿ]+", text)
+    marathi = sum(word in MARATHI_WORDS or word.endswith(("च्या", "मध्ये")) for word in words) + text.count("ळ")
+    hindi = sum(word in HINDI_WORDS for word in words)
+    return "mr" if marathi > hindi else "hi"

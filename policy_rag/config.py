@@ -44,6 +44,8 @@ def load_prompt_text(prompt_filename: str) -> str:
 def load_system_prompt(mode: str = "insurance_rag") -> str:
     if mode == "fallback_confirmed":
         return load_prompt_text("system_prompt_fallback_confirmed.md")
+    if mode == "conversational":
+        return load_prompt_text("system_prompt_conversational.md")
     return load_prompt_text("system_prompt_insurance_rag.md")
 
 
@@ -59,4 +61,5 @@ def allow_out_of_scope_answers() -> bool:
 
 
 def require_fallback_confirmation() -> bool:
-    return env_flag("REQUIRE_FALLBACK_CONFIRMATION", True)
+    # Off by default: the web is searched automatically when the policy documents have no answer
+    return env_flag("REQUIRE_FALLBACK_CONFIRMATION", False)

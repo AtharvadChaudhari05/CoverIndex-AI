@@ -2,21 +2,29 @@ from __future__ import annotations
 
 import json
 import re
+import signal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
 from .agent import (
+    INTERNET_SEARCH_PROMPT_MESSAGE,
     OUT_OF_SCOPE_REFUSAL_MESSAGE,
+    SUPPORTED_ANSWER_LANGUAGES,
+    answer_conversational,
     answer_query,
-    classify_query_scope,
+    classify_conversational,
     is_confirmation_query,
+    resolve_query_scope,
+    rewrite_query_with_history,
     route_query,
+    translate_to_user_language,
 )
 from .config import WEB_DIR, allow_out_of_scope_answers, require_fallback_confirmation
 from .index import PageIndex
 from .models import ConversationState, QueryResult
+from .tts import MAX_TTS_CHARS, TTS_LANGUAGES, TTSError, synthesize_speech, tts_available
 
 
 INDEX: PageIndex | None = None
@@ -179,6 +187,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     session_id = str(payload.get("session_id") or "default").strip() or "default"
                     chat_history = payload.get("chat_history", [])
                     confirm_fallback = bool(payload.get("confirm_fallback", False))
+                    answer_language = str(payload.get("answer_language") or "auto").strip().lower()
                     if file_name:
                         file_name = str(file_name).strip()
                 except Exception as exc:
@@ -188,11 +197,30 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 if not query:
                     self._send_json({"error": "Query is required"}, status=HTTPStatus.BAD_REQUEST)
                     return
+                if answer_language not in SUPPORTED_ANSWER_LANGUAGES:
+                    self._send_json(
+                        {"error": f"Unsupported answer_language: {answer_language}"},
+                        status=HTTPStatus.BAD_REQUEST,
+                    )
+                    return
 
                 index = ensure_index()
                 state = ensure_session_state(session_id)
-                route = route_query(query)
-                scope, scope_reasoning = classify_query_scope(query, file_name=file_name)
+                is_confirm = confirm_fallback or is_confirmation_query(query)
+                awaiting_answer = state.status == "awaiting_confirmation" and is_confirm
+                # Small talk and requests about an earlier reply ("translate that to English") need no document search
+                conversational_kind = None if awaiting_answer else classify_conversational(query, chat_history)
+                # Routing and scope checks match English keywords, so run them on the English rewrite.
+                # A confirmation reply ("yes") answers an earlier query, so it needs no rewrite.
+                if is_confirm or conversational_kind:
+                    search_query = query
+                else:
+                    search_query = rewrite_query_with_history(query, chat_history)
+                route = route_query(search_query)
+                if conversational_kind:
+                    scope, scope_reasoning = "insurance", f"conversational message ({conversational_kind})"
+                else:
+                    scope, scope_reasoning = resolve_query_scope(search_query, route=route, file_name=file_name)
                 allow_out_of_scope = allow_out_of_scope_answers()
                 fallback_confirmation_required = require_fallback_confirmation()
                 response_meta = {
@@ -204,13 +232,17 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     "session_state": state.status,
                 }
 
-                is_confirm = confirm_fallback or is_confirmation_query(query)
+                conversational_result = (
+                    answer_conversational(query, chat_history, conversational_kind, answer_language)
+                    if conversational_kind
+                    else None
+                )
 
-                if state.status == "awaiting_confirmation" and is_confirm:
+                if awaiting_answer:
                     query_to_answer = state.last_out_of_scope_query or query
                     state.status = "fallback_confirmed"
                     state.last_out_of_scope_query = None
-                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history)
+                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history, answer_language=answer_language)
                     response_meta.update(
                         {
                             "assistant_mode": "fallback_confirmed",
@@ -218,11 +250,14 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                             "session_state": state.status,
                         }
                     )
+                elif conversational_result is not None:
+                    result = conversational_result
+                    response_meta["assistant_mode"] = "conversational"
                 elif scope == "out_of_scope" and not allow_out_of_scope:
                     state.status = "insurance"
                     state.last_out_of_scope_query = None
                     result = QueryResult(
-                        answer=OUT_OF_SCOPE_REFUSAL_MESSAGE,
+                        answer=translate_to_user_language(OUT_OF_SCOPE_REFUSAL_MESSAGE, query, answer_language),
                         confidence=0.0,
                         route=route,
                         sources=[],
@@ -239,7 +274,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     query_to_answer = state.last_out_of_scope_query or query
                     state.status = "fallback_confirmed"
                     state.last_out_of_scope_query = None
-                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history)
+                    result = answer_query(index, query_to_answer, file_name=file_name, mode="fallback_confirmed", chat_history=chat_history, answer_language=answer_language)
                     response_meta.update(
                         {
                             "assistant_mode": "fallback_confirmed",
@@ -250,9 +285,8 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 elif scope == "out_of_scope" and fallback_confirmation_required and state.status != "fallback_confirmed":
                     state.status = "awaiting_confirmation"
                     state.last_out_of_scope_query = query
-                    from .agent import INTERNET_SEARCH_PROMPT_MESSAGE, translate_to_user_language
                     result = QueryResult(
-                        answer=translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, query),
+                        answer=translate_to_user_language(INTERNET_SEARCH_PROMPT_MESSAGE, query, answer_language),
                         confidence=0.0,
                         route=route,
                         sources=[],
@@ -268,7 +302,7 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 else:
                     state.status = "insurance"
                     state.last_out_of_scope_query = None
-                    result = answer_query(index, query, file_name=file_name, mode="insurance_rag", chat_history=chat_history)
+                    result = answer_query(index, query, file_name=file_name, mode="insurance_rag", chat_history=chat_history, search_query=search_query, answer_language=answer_language, scope=(scope, scope_reasoning))
                     
                     # If the LLM or fallback synthesizer triggered the internet search prompt, we must await confirmation
                     requires_fallback = any("insufficient retrieved context" in t or "NO_CONTEXT tag" in t for t in result.trace)
@@ -306,6 +340,43 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"An internal server error occurred while processing the query. Details: {e}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
+        if path == "/api/tts":
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+                text = str(payload.get("text", "")).strip()
+                language = str(payload.get("language", "en-IN")).strip()
+            except Exception as exc:
+                self._send_json({"error": f"Invalid JSON payload: {exc}"}, status=HTTPStatus.BAD_REQUEST)
+                return
+
+            if not tts_available():
+                # The client falls back to the browser's own voices on this status
+                self._send_json({"error": "Server text-to-speech is not configured"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                return
+            if not text or len(text) > MAX_TTS_CHARS:
+                self._send_json({"error": f"Text must be 1 to {MAX_TTS_CHARS} characters"}, status=HTTPStatus.BAD_REQUEST)
+                return
+            if language not in TTS_LANGUAGES:
+                self._send_json({"error": f"Unsupported language: {language}"}, status=HTTPStatus.BAD_REQUEST)
+                return
+
+            try:
+                audio = synthesize_speech(text, language)
+            except TTSError as exc:
+                print(f"[CoverIndex AI] {exc}", flush=True)
+                self._send_json({"error": "Text-to-speech failed"}, status=HTTPStatus.BAD_GATEWAY)
+                return
+
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "audio/mpeg")
+            self.send_header("Content-Length", str(len(audio)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(audio)
+            return
+
         self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not found")
 
     def _serve_static(self, relative_path: str, content_type: str) -> None:
@@ -336,12 +407,18 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
         return
 
 
+def _raise_keyboard_interrupt(signum, frame) -> None:
+    raise KeyboardInterrupt
+
+
 def run_server(host: str = "127.0.0.1", port: int = 8000) -> None:
     print("PolicyLens AI server starting up...", flush=True)
     print("Index will be loaded lazily on the first request.", flush=True)
 
     server = ThreadingHTTPServer((host, port), PolicyLensHandler)
     print(f"Open http://{host}:{port}", flush=True)
+    # Treat SIGTERM (sent by systemd, Docker, etc.) like Ctrl-C so we shut down cleanly.
+    signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -57,6 +57,7 @@ const attachmentFileName = document.getElementById("attachmentFileName");
 const removeAttachmentBtn = document.getElementById("removeAttachmentBtn");
 const voiceLanguageSelect = document.getElementById("voiceLanguageSelect");
 const answerLanguageSelect = document.getElementById("answerLanguageSelect");
+const requestsRemainingText = document.getElementById("requestsRemainingText");
 const micBtn = document.querySelector(".mic-btn");
 const chatSearchInput = document.getElementById("chatSearchInput");
 const searchResultsContainer = document.getElementById("searchResultsContainer");
@@ -585,10 +586,19 @@ function enterDashboard(mode = "") {
 }
 
 // Check index status
+// Daily request limit: questions and PDF uploads count; the server sends the remaining count
+function updateRequestsRemaining(payload) {
+  if (!requestsRemainingText || !payload) return;
+  const { requests_remaining: remaining, request_limit: limit } = payload;
+  if (typeof remaining !== "number" || typeof limit !== "number" || limit <= 0) return;
+  requestsRemainingText.textContent = `${remaining} of ${limit} requests left today`;
+}
+
 async function loadIndexStatus() {
   try {
     const response = await fetch(`${API_BASE_URL}/api/status`);
     const payload = await response.json();
+    updateRequestsRemaining(payload);
     if (payload.ready) {
       statusText.textContent = `${payload.page_count} pages indexed`;
     }
@@ -1422,6 +1432,7 @@ async function uploadPdfFile(file) {
       body: formData
     });
     const payload = await response.json();
+    updateRequestsRemaining(payload);
     if (!response.ok) {
       throw new Error(payload.error || "Failed to upload file");
     }
@@ -1620,6 +1631,7 @@ async function submitQuery(query) {
           body: formData
         });
         const uploadPayload = await uploadResponse.json();
+        updateRequestsRemaining(uploadPayload);
         if (!uploadResponse.ok) {
           throw new Error(uploadPayload.error || "Failed to upload file");
         }
@@ -1681,6 +1693,11 @@ async function submitQuery(query) {
       })
     });
     const payload = await response.json();
+    updateRequestsRemaining(payload);
+      if (response.status === 429) {
+        updateMessage(loadingId, `### Daily limit reached\n${payload.error}`);
+        return;
+      }
       if (!response.ok) {
         throw new Error(payload.error || "Query failed");
       }

@@ -51,6 +51,15 @@ async function proxyApiRequest(url, request) {
   const headers = new Headers(request.headers);
   headers.set("host", new URL(API_BASE).host);
 
+  // The API limits requests per client IP. Behind this Worker every request comes from Cloudflare,
+  // so pass the real IP; the shared secret proves the header came from this Worker, not a client.
+  headers.delete("X-Client-IP");
+  headers.delete("X-Proxy-Secret");
+  if (typeof PROXY_SHARED_SECRET !== "undefined" && PROXY_SHARED_SECRET) {
+    headers.set("X-Client-IP", request.headers.get("CF-Connecting-IP") || "");
+    headers.set("X-Proxy-Secret", PROXY_SHARED_SECRET);
+  }
+
   return fetch(target.toString(), {
     method: request.method,
     headers,

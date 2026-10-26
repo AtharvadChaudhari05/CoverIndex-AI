@@ -145,6 +145,22 @@ After the fix, the same question took 9 seconds.
 
 `guess_devanagari_language()` tells Hindi from Marathi by common words (for example आहे, नाही, आणि for Marathi and है, नहीं, और for Hindi) and by the letter ळ, which is frequent only in Marathi. `translate_to_user_language()` uses it, so the stored translations of the fixed messages work for Marathi without an LLM call.
 
+### 9. Request limit (`policy_rag/rate_limit.py`, new file)
+
+Each client IP can send 20 requests in 24 hours. Questions (`/api/ask`) and PDF uploads (`/api/upload`) count. Read-aloud and status calls do not count. A request that fails validation (for example an empty question) does not count.
+
+- `RateLimiter` keeps a sliding window of request times for each IP. The 21st request gets HTTP 429, a `Retry-After` header, and a message that says when the user can try again.
+- `/api/ask`, `/api/upload`, and `/api/status` return `requests_remaining` and `request_limit`. The frontend shows "N of 20 requests left today" under the message box.
+- The counts are kept in memory. A server restart resets them.
+
+**Finding the real client IP.** In production, requests go from the browser to the Cloudflare Worker (`worker.js`), then to Render, then to the app. Thus every request seems to come from a proxy, and all users would share one limit. `resolve_client_ip()` handles this:
+
+1. If `PROXY_SHARED_SECRET` is set and the request has the same value in `X-Proxy-Secret`, the app uses `X-Client-IP`. The Worker sets both headers. It takes the client IP from `CF-Connecting-IP`.
+2. Else, if `TRUST_X_FORWARDED_FOR=true`, the app uses the last entry of `X-Forwarded-For`. A single reverse proxy appends the address it saw as the last entry. A client can add fake entries only before it.
+3. Else, the app uses the IP of the connection.
+
+The app never trusts proxy headers by default, because any client can send them.
+
 ## Safety Measures
 
 - **Internal addresses.** The server never downloads a page whose host resolves to a private, loopback, or link-local address. It checks the final address after redirects too. This prevents a search result from making the server read internal services.
@@ -159,6 +175,10 @@ After the fix, the same question took 9 seconds.
 | `REQUIRE_FALLBACK_CONFIRMATION` | `false` | `true` asks the user before each web search. |
 | `WEB_SEARCH_BACKENDS` | `yahoo,bing,yandex,duckduckgo` | Search engines that `ddgs` tries, in order. |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model for the fallback. |
+| `RATE_LIMIT_REQUESTS` | `20` | Requests for each client IP in one window. `0` turns the limit off. |
+| `RATE_LIMIT_WINDOW_SECONDS` | `86400` | Length of the window (24 hours). |
+| `PROXY_SHARED_SECRET` | not set | Secret shared with the Cloudflare Worker, so the app can trust `X-Client-IP`. |
+| `TRUST_X_FORWARDED_FOR` | `false` | `true` uses the last entry of `X-Forwarded-For` as the client IP. |
 
 ## Tests
 
@@ -174,6 +194,7 @@ The new tests are in `tests/test_chatbot.py`. All external calls (LLMs, web sear
 | Chat history | The answering LLM receives the conversation. |
 | Page reading | Page chrome is removed. Relevant blocks are selected. Internal and non-HTTP URLs are rejected. An unreadable page falls back to its snippet. |
 | Languages | Hindi and Marathi sentences are told apart. |
+| Request limit (`tests/test_rate_limit.py`) | The 21st request is blocked, the window slides, IPs are counted separately, invalid requests and status calls do not count, uploads count, and spoofed proxy headers are ignored. |
 
 Results:
 

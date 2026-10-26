@@ -24,11 +24,14 @@ from .agent import (
 from .config import WEB_DIR, allow_out_of_scope_answers, require_fallback_confirmation
 from .index import PageIndex
 from .models import ConversationState, QueryResult
+from .rate_limit import RateLimiter, resolve_client_ip
 from .tts import MAX_TTS_CHARS, TTS_LANGUAGES, TTSError, synthesize_speech, tts_available
 
 
 INDEX: PageIndex | None = None
 SESSION_STATES: dict[str, ConversationState] = {}
+# Questions and PDF uploads count toward this limit; read-aloud and status calls do not
+REQUEST_LIMITER = RateLimiter.from_env()
 
 
 def ensure_index() -> PageIndex:
@@ -69,6 +72,8 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     "page_count": len(ensure_index().records),
                     "document_count": ensure_index().document_count,
                     "signature": ensure_index().signature,
+                    "request_limit": REQUEST_LIMITER.limit,
+                    "requests_remaining": REQUEST_LIMITER.remaining(self._client_ip()),
                 }
             )
             return
@@ -117,6 +122,10 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 content_type = self.headers.get("Content-Type", "")
                 if not content_type.startswith("multipart/form-data"):
                     self._send_json({"error": "Content-Type must be multipart/form-data"}, status=HTTPStatus.BAD_REQUEST)
+                    return
+                allowed, requests_remaining, retry_after = REQUEST_LIMITER.consume(self._client_ip())
+                if not allowed:
+                    self._send_rate_limited(retry_after)
                     return
                 
                 # Extract boundary
@@ -171,6 +180,8 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     "page_count": len(records),
                     "total_pages": len(index.records),
                     "total_documents": index.document_count,
+                    "request_limit": REQUEST_LIMITER.limit,
+                    "requests_remaining": requests_remaining,
                 })
             except Exception as e:
                 self._send_json({"error": f"Upload processing failed: {str(e)}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -203,6 +214,10 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                         status=HTTPStatus.BAD_REQUEST,
                     )
                     return
+                allowed, requests_remaining, retry_after = REQUEST_LIMITER.consume(self._client_ip())
+                if not allowed:
+                    self._send_rate_limited(retry_after)
+                    return
 
                 index = ensure_index()
                 state = ensure_session_state(session_id)
@@ -224,6 +239,8 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 allow_out_of_scope = allow_out_of_scope_answers()
                 fallback_confirmation_required = require_fallback_confirmation()
                 response_meta = {
+                    "request_limit": REQUEST_LIMITER.limit,
+                    "requests_remaining": requests_remaining,
                     "session_id": session_id,
                     "query_scope": scope,
                     "scope_reasoning": scope_reasoning,
@@ -392,6 +409,34 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(payload)
+
+    def _client_ip(self) -> str:
+        return resolve_client_ip(self.client_address[0], self.headers)
+
+    def _send_rate_limited(self, retry_after: int) -> None:
+        hours, minutes = divmod(max(1, retry_after // 60), 60)
+        wait = f"{hours} h {minutes} min" if hours else f"{minutes} min"
+        window = REQUEST_LIMITER.window_seconds
+        period = f"{window // 3600} hours" if window >= 3600 else f"{max(1, window // 60)} minutes"
+        body = json.dumps(
+            {
+                "error": (
+                    f"You have used all {REQUEST_LIMITER.limit} requests allowed per {period}. "
+                    f"Please try again in {wait}."
+                ),
+                "retry_after_seconds": retry_after,
+                "requests_remaining": 0,
+                "request_limit": REQUEST_LIMITER.limit,
+            }
+        ).encode("utf-8")
+        self.send_response(HTTPStatus.TOO_MANY_REQUESTS)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Retry-After", str(retry_after))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

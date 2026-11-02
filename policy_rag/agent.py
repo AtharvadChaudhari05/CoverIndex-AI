@@ -265,6 +265,10 @@ NO_ANSWER_MESSAGE = (
     "Please try asking it in a different way."
 )
 GREETING_MESSAGE = "Hello! I can help you with insurance policies, claims, and coverage. What would you like to know?"
+DOCUMENT_MISSING_MESSAGE = (
+    "I can no longer find your uploaded document. The server may have restarted. "
+    "Please attach the PDF again and ask your question."
+)
 
 # Stored translations of the fixed system messages, so they need no LLM call.
 FIXED_TRANSLATIONS = {
@@ -303,6 +307,13 @@ FIXED_TRANSLATIONS = {
         "te": "నమస్కారం! బీమా పాలసీలు, క్లెయిమ్‌లు మరియు కవరేజ్ గురించి నేను మీకు సహాయం చేయగలను. మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
         "bn": "নমস্কার! আমি বীমা পলিসি, দাবি এবং কভারেজ সম্পর্কে আপনাকে সাহায্য করতে পারি। আপনি কী জানতে চান?",
     },
+    DOCUMENT_MISSING_MESSAGE: {
+        "hi": "मुझे अब आपका अपलोड किया गया दस्तावेज़ नहीं मिल रहा है। हो सकता है सर्वर फिर से शुरू हुआ हो। कृपया PDF फिर से जोड़ें और अपना प्रश्न पूछें।",
+        "mr": "मला आता तुमचे अपलोड केलेले कागदपत्र सापडत नाही. सर्व्हर पुन्हा सुरू झाला असावा. कृपया PDF पुन्हा जोडा आणि तुमचा प्रश्न विचारा.",
+        "ta": "நீங்கள் பதிவேற்றிய ஆவணத்தை இப்போது என்னால் கண்டுபிடிக்க முடியவில்லை. சர்வர் மீண்டும் தொடங்கியிருக்கலாம். தயவுசெய்து PDF-ஐ மீண்டும் இணைத்து உங்கள் கேள்வியைக் கேளுங்கள்.",
+        "te": "మీరు అప్‌లోడ్ చేసిన పత్రం ఇప్పుడు నాకు కనిపించడం లేదు. సర్వర్ మళ్లీ ప్రారంభమై ఉండవచ్చు. దయచేసి PDFని మళ్లీ జత చేసి మీ ప్రశ్న అడగండి.",
+        "bn": "আমি এখন আপনার আপলোড করা নথিটি খুঁজে পাচ্ছি না। সার্ভারটি হয়তো আবার চালু হয়েছে। অনুগ্রহ করে PDF আবার যুক্ত করে আপনার প্রশ্নটি জিজ্ঞাসা করুন।",
+    },
 }
 
 # Small talk: a greeting or thanks, optionally followed only by filler words
@@ -325,6 +336,8 @@ FOLLOWUP_PATTERNS = [
     re.compile(r"\bin simple (words|terms|language)\b"),
     re.compile(r"\b(as|in) (a )?(table|bullet points|points)\b"),
 ]
+# In a chat about an uploaded PDF, "summarize this document" asks about the PDF, not about an earlier reply
+DOCUMENT_REFERENCE_RE = re.compile(r"\b(document|doc|pdf|file|policy|brochure|wording)\b")
 FOLLOWUP_NATIVE_TERMS = [
     "अनुवाद", "इंग्रजी", "इंग्लिश", "अंग्रेज़ी", "अंग्रेजी", "थोडक्यात", "सोप्या", "संक्षेप", "आसान भाषा", "छोटा करके",
     "english madhe", "english mein", "english me",
@@ -678,7 +691,7 @@ def resolve_query_scope(query: str, route: QueryRoute | None = None, file_name: 
     return scope, reasoning
 
 
-def classify_conversational(query: str, chat_history: list[dict[str, str]] | None) -> str | None:
+def classify_conversational(query: str, chat_history: list[dict[str, str]] | None, file_name: str | None = None) -> str | None:
     """Returns "small_talk" for greetings and thanks, "followup" for a request that acts on an earlier
     reply (translate, shorten, ...), or None for a normal question."""
     cleaned = re.sub(r"[.,!?।:;'\"()]+", " ", normalize_text(query).lower())
@@ -692,6 +705,8 @@ def classify_conversational(query: str, chat_history: list[dict[str, str]] | Non
                 return "small_talk"
 
     has_earlier_reply = any(message.get("role") == "assistant" for message in chat_history or [])
+    if file_name and DOCUMENT_REFERENCE_RE.search(cleaned):
+        return None
     if has_earlier_reply and (
         any(pattern.search(cleaned) for pattern in FOLLOWUP_PATTERNS)
         or any(term in cleaned for term in FOLLOWUP_NATIVE_TERMS)
@@ -767,6 +782,17 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
             trace=trace,
         )
 
+    # The client names a document it uploaded earlier; uploads live in memory, so a restart loses them
+    if file_name and not index.has_document(file_name):
+        trace.append(f"retriever: requested document is not in the index: {file_name}")
+        return QueryResult(
+            answer=translate_to_user_language(DOCUMENT_MISSING_MESSAGE, original_query, answer_language),
+            confidence=0.0,
+            route=route,
+            sources=[],
+            trace=trace,
+        )
+
     # Auto-detect mentioned file name in query if not explicitly passed
     file_name_filter = file_name
     if not file_name_filter:
@@ -787,6 +813,10 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
             file_name_filter=file_name_filter,
             top_k=6,
         )
+        if not hits:
+            # Questions about the whole file ("summarize this") share few keywords with any one page
+            hits = index.document_pages(file_name_filter)
+            trace.append(f"retriever: no keyword match in the document; using its first {len(hits)} pages")
     else:
         # Use routed insurer or product name to filter search
         hits = index.search(

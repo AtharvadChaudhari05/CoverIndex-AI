@@ -1690,6 +1690,7 @@ async function submitQuery(query) {
         updateMessage(loadingId, `### Analyzing Document...\nDocument **${fileToUpload.name}** uploaded successfully. Running query: "${query}"...`);
         fileUploadedName = uploadPayload.filename || fileToUpload.name;
         uploadedFiles.push(fileUploadedName);
+        indexedPolicies.push(fileUploadedName.toLowerCase());
         loadIndexStatus();
       } catch (uploadError) {
         updateMessage(loadingId, `### Upload Failed\nCould not index policy document: **${uploadError.message}**.`);
@@ -1713,7 +1714,13 @@ async function submitQuery(query) {
 
   // Now query /api/ask
   try {
-    let askFileName = fileUploadedName;
+    // Remember the chat's document so follow-up questions are answered from the same PDF
+    const session = ensureActiveSession();
+    if (fileUploadedName) {
+      session.documentName = fileUploadedName;
+      saveChatSessions();
+    }
+    let askFileName = session.documentName || null;
     if (!askFileName && activeSessionName.startsWith("Review: ")) {
       askFileName = activeSessionName.replace("Review: ", "");
     }
@@ -1738,6 +1745,7 @@ async function submitQuery(query) {
       body: JSON.stringify({
         query,
         file_name: askFileName,
+        document_attached: Boolean(fileUploadedName),
         session_id: activeSessionId,
         chat_history: chatHistory,
         answer_language: getAnswerLanguage(),

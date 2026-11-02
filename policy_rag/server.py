@@ -166,15 +166,9 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     self._send_json({"error": "Failed to extract text from PDF (it might be empty or encrypted)"}, status=HTTPStatus.BAD_REQUEST)
                     return
                 
-                # Add to index records in-memory
-                index.records.extend(records)
-                index.document_count = len({r.doc_id for r in index.records})
-                
-                # Re-calculate document frequency for terms
-                for record in records:
-                    for term in record.token_counts:
-                        index.document_frequency[term] = index.document_frequency.get(term, 0) + 1
-                
+                # Add to the in-memory index; uploading the same file again replaces its pages
+                index.add_document(records)
+
                 self._send_json({
                     "success": True,
                     "filename": filename,
@@ -201,6 +195,8 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                     chat_history = payload.get("chat_history", [])
                     confirm_fallback = bool(payload.get("confirm_fallback", False))
                     answer_language = str(payload.get("answer_language") or "auto").strip().lower()
+                    # True when the PDF was attached to this message, so the question is about that PDF
+                    document_attached = bool(payload.get("document_attached", False))
                     if file_name:
                         file_name = str(file_name).strip()
                 except Exception as exc:
@@ -226,7 +222,9 @@ class PolicyLensHandler(BaseHTTPRequestHandler):
                 is_confirm = confirm_fallback or is_confirmation_query(query)
                 awaiting_answer = state.status == "awaiting_confirmation" and is_confirm
                 # Small talk and requests about an earlier reply ("translate that to English") need no document search
-                conversational_kind = None if awaiting_answer else classify_conversational(query, chat_history)
+                conversational_kind = (
+                    None if awaiting_answer or document_attached else classify_conversational(query, chat_history, file_name=file_name)
+                )
                 # Routing and scope checks match English keywords, so run them on the English rewrite.
                 # A confirmation reply ("yes") answers an earlier query, so it needs no rewrite.
                 if is_confirm or conversational_kind:

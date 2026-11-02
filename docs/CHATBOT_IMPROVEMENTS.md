@@ -1,4 +1,4 @@
-# Chatbot Improvements: Conversation, Relaxed Guardrails, and Automatic Web Search
+Chatbot Improvements: Conversation, Relaxed Guardrails, and Automatic Web Search
 
 ## Purpose
 
@@ -8,14 +8,14 @@ This document explains how CoverIndex AI changed from a strict question-and-answ
 
 Users reported that the bot "gets stuck" on normal chat messages. Live requests against the server showed these results:
 
-| Message | Old result |
-|---|---|
-| "now give me the answer of the above question in english" | An unrelated answer from a new document search |
-| "translate your last answer to english" | The refusal message |
-| "make it shorter" | An unrelated answer about claim documents |
-| "hello" | The refusal message |
-| "thanks, that helped" | A numbered list with 5 points |
-| "my flight got delayed by 8 hours, will I get money back" | The refusal message |
+| Message                                                     | Old result                                           |
+| ----------------------------------------------------------- | ---------------------------------------------------- |
+| "now give me the answer of the above question in english"   | An unrelated answer from a new document search       |
+| "translate your last answer to english"                     | The refusal message                                  |
+| "make it shorter"                                           | An unrelated answer about claim documents            |
+| "hello"                                                     | The refusal message                                  |
+| "thanks, that helped"                                       | A numbered list with 5 points                        |
+| "my flight got delayed by 8 hours, will I get money back"   | The refusal message                                  |
 | "what is the average claim settlement ratio of LIC in 2025" | A question: "Do you want me to search the internet?" |
 
 ## The Causes
@@ -30,11 +30,11 @@ Users reported that the bot "gets stuck" on normal chat messages. Live requests 
 
 The project owner chose three options:
 
-| Question | Decision |
-|---|---|
-| Scope | **Insurance-first.** Answer insurance questions from the documents and the web. Allow small talk and requests about earlier replies. Decline other topics. |
-| Web search | **Automatic.** Search the web without permission when the documents have no answer. Label web information clearly. |
-| Search backend | **`ddgs` and page reading.** Keep the free `ddgs` package, but download the result pages and extract their text. |
+| Question       | Decision                                                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scope          | **Insurance-first.** Answer insurance questions from the documents and the web. Allow small talk and requests about earlier replies. Decline other topics. |
+| Web search     | **Automatic.** Search the web without permission when the documents have no answer. Label web information clearly.                                         |
+| Search backend | **`ddgs` and page reading.** Keep the free `ddgs` package, but download the result pages and extract their text.                                       |
 
 ## How Web Search Works
 
@@ -115,14 +115,14 @@ A fixed threshold on the document-search score was tested first and rejected. Of
 
 ### 6. Page reading (`policy_rag/web.py`, new file)
 
-| Function | What it does |
-|---|---|
+| Function                                        | What it does                                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `perform_internet_search()` (in `agent.py`) | Tries the engines in `WEB_SEARCH_BACKENDS` (default `yahoo,bing,yandex,duckduckgo`) until one returns results. |
-| `read_pages()` | Downloads the result pages in parallel. If a page cannot be read, it uses the search snippet. |
-| `fetch_page_text()` | Downloads one page. Limits: 6 seconds, 1.5 MB, HTML only. |
-| `extract_text_blocks()` | Removes scripts, styles, menus, headers, footers, and forms. Keeps text blocks of 60 characters or more. |
-| `select_relevant_text()` | Keeps the blocks that share the most words with the query, up to 1,500 characters per page. |
-| `is_public_http_url()` | Accepts only `http` and `https` URLs whose host resolves to a public address. |
+| `read_pages()`                                | Downloads the result pages in parallel. If a page cannot be read, it uses the search snippet.                      |
+| `fetch_page_text()`                           | Downloads one page. Limits: 6 seconds, 1.5 MB, HTML only.                                                          |
+| `extract_text_blocks()`                       | Removes scripts, styles, menus, headers, footers, and forms. Keeps text blocks of 60 characters or more.           |
+| `select_relevant_text()`                      | Keeps the blocks that share the most words with the query, up to 1,500 characters per page.                        |
+| `is_public_http_url()`                        | Accepts only `http` and `https` URLs whose host resolves to a public address.                                  |
 
 The code uses only the Python standard library, so no new dependency was added.
 
@@ -170,30 +170,30 @@ The app never trusts proxy headers by default, because any client can send them.
 
 ## Configuration
 
-| Variable | Default | Effect |
-|---|---|---|
-| `REQUIRE_FALLBACK_CONFIRMATION` | `false` | `true` asks the user before each web search. |
-| `WEB_SEARCH_BACKENDS` | `yahoo,bing,yandex,duckduckgo` | Search engines that `ddgs` tries, in order. |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model for the fallback. |
-| `RATE_LIMIT_REQUESTS` | `20` | Requests for each client IP in one window. `0` turns the limit off. |
-| `RATE_LIMIT_WINDOW_SECONDS` | `86400` | Length of the window (24 hours). |
-| `PROXY_SHARED_SECRET` | not set | Secret shared with the Cloudflare Worker, so the app can trust `X-Client-IP`. |
-| `TRUST_X_FORWARDED_FOR` | `false` | `true` uses the last entry of `X-Forwarded-For` as the client IP. |
+| Variable                          | Default                          | Effect                                                                          |
+| --------------------------------- | -------------------------------- | ------------------------------------------------------------------------------- |
+| `REQUIRE_FALLBACK_CONFIRMATION` | `false`                        | `true` asks the user before each web search.                                  |
+| `WEB_SEARCH_BACKENDS`           | `yahoo,bing,yandex,duckduckgo` | Search engines that `ddgs` tries, in order.                                   |
+| `GEMINI_MODEL`                  | `gemini-3.8-flash`             | Gemini model for the fallback.                                                  |
+| `RATE_LIMIT_REQUESTS`           | `20`                           | Requests for each client IP in one window. `0` turns the limit off.           |
+| `RATE_LIMIT_WINDOW_SECONDS`     | `86400`                        | Length of the window (24 hours).                                                |
+| `PROXY_SHARED_SECRET`           | not set                          | Secret shared with the Cloudflare Worker, so the app can trust `X-Client-IP`. |
+| `TRUST_X_FORWARDED_FOR`         | `false`                        | `true` uses the last entry of `X-Forwarded-For` as the client IP.           |
 
 ## Tests
 
 The new tests are in `tests/test_chatbot.py`. All external calls (LLMs, web search, page downloads) are mocked.
 
-| Area | What the tests check |
-|---|---|
-| Conversation classifier | Greetings and thanks in several languages are small talk. A greeting with a question is not. Follow-up requests need an earlier reply. |
-| Conversational endpoint | A follow-up skips the rewrite and the document search, and the LLM receives the full history. A greeting works without an LLM. |
-| Scope | The LLM check widens the scope when no keyword matches. Off-topic keywords skip the LLM. |
-| Web search | The bot searches automatically and labels the answer. A failed search gives the no-answer message without sources. The search tries the next engine after a failure. |
-| Gemini | A `[NO_CONTEXT]` answer from Groq does not call Gemini. |
-| Chat history | The answering LLM receives the conversation. |
-| Page reading | Page chrome is removed. Relevant blocks are selected. Internal and non-HTTP URLs are rejected. An unreadable page falls back to its snippet. |
-| Languages | Hindi and Marathi sentences are told apart. |
+| Area                                         | What the tests check                                                                                                                                                              |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conversation classifier                      | Greetings and thanks in several languages are small talk. A greeting with a question is not. Follow-up requests need an earlier reply.                                            |
+| Conversational endpoint                      | A follow-up skips the rewrite and the document search, and the LLM receives the full history. A greeting works without an LLM.                                                    |
+| Scope                                        | The LLM check widens the scope when no keyword matches. Off-topic keywords skip the LLM.                                                                                          |
+| Web search                                   | The bot searches automatically and labels the answer. A failed search gives the no-answer message without sources. The search tries the next engine after a failure.              |
+| Gemini                                       | A `[NO_CONTEXT]` answer from Groq does not call Gemini.                                                                                                                         |
+| Chat history                                 | The answering LLM receives the conversation.                                                                                                                                      |
+| Page reading                                 | Page chrome is removed. Relevant blocks are selected. Internal and non-HTTP URLs are rejected. An unreadable page falls back to its snippet.                                      |
+| Languages                                    | Hindi and Marathi sentences are told apart.                                                                                                                                       |
 | Request limit (`tests/test_rate_limit.py`) | The 21st request is blocked, the window slides, IPs are counted separately, invalid requests and status calls do not count, uploads count, and spoofed proxy headers are ignored. |
 
 Results:
@@ -211,14 +211,14 @@ uv run python -m unittest tests.test_chatbot tests.test_multilingual -v
 
 These requests were sent to the running server after the changes:
 
-| Message | New result |
-|---|---|
-| "now give me the answer of the above question in english" | The earlier Marathi answer in English, with its sources |
-| "make it shorter" | A shorter form of the earlier answer |
-| "hello" | "Hello! How can I help you with your insurance policies, claims, or coverage today?" |
-| "thanks, that helped" | A short reply that offers more help |
-| "my flight got delayed by 8 hours, will I get money back" | An answer from the Tata AIG travel policy, with sources |
-| "what is the capital of France" | The polite refusal |
+| Message                                                     | New result                                                                                 |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| "now give me the answer of the above question in english"   | The earlier Marathi answer in English, with its sources                                    |
+| "make it shorter"                                           | A shorter form of the earlier answer                                                       |
+| "hello"                                                     | "Hello! How can I help you with your insurance policies, claims, or coverage today?"       |
+| "thanks, that helped"                                       | A short reply that offers more help                                                        |
+| "my flight got delayed by 8 hours, will I get money back"   | An answer from the Tata AIG travel policy, with sources                                    |
+| "what is the capital of France"                             | The polite refusal                                                                         |
 | "what is the average claim settlement ratio of LIC in 2025" | An answer from three web pages, with links and the general-information label, in 9 seconds |
 
 ## Known Limits

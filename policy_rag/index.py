@@ -76,6 +76,33 @@ class PageIndex:
         hits.sort(key=lambda item: item.score, reverse=True)
         return hits[:top_k]
 
+    def add_document(self, records: list[PageRecord]) -> None:
+        """Adds the pages of an uploaded PDF, replacing an earlier upload of the same file."""
+        source_paths = {record.source_path for record in records}
+        for old in (record for record in self.records if record.source_path in source_paths):
+            for term in old.token_counts:
+                self.document_frequency[term] -= 1
+        self.records = [record for record in self.records if record.source_path not in source_paths]
+        self.records.extend(records)
+        for record in records:
+            for term in record.token_counts:
+                self.document_frequency[term] = self.document_frequency.get(term, 0) + 1
+        self.document_count = len({record.doc_id for record in self.records})
+        total_length = sum(record.token_count for record in self.records)
+        self.avg_doc_length = total_length / max(len(self.records), 1) or 1.0
+
+    def has_document(self, file_name: str) -> bool:
+        return any(record.file_name.lower() == file_name.lower() for record in self.records)
+
+    def document_pages(self, file_name: str, max_pages: int = 4) -> list[SearchHit]:
+        """Returns the first pages of a document, for questions about the whole file ("summarize this")."""
+        pages = [record for record in self.records if record.file_name.lower() == file_name.lower()]
+        pages.sort(key=lambda record: record.page_number)
+        return [
+            SearchHit(record=record, score=0.0, highlight=compact_whitespace(record.text, 220))
+            for record in pages[:max_pages]
+        ]
+
     def expanded_context(self, hits: list[SearchHit], max_pages: int = 6) -> list[SearchHit]:
         expanded: list[SearchHit] = []
         seen: set[tuple[str, int]] = set()

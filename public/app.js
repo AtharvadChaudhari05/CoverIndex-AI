@@ -1099,6 +1099,8 @@ function openChatSession(sessionId) {
   chatSessionTitle.textContent = session.title;
   chatHistory.innerHTML = session.html || "";
   hasMessages = Boolean(session.html);
+  const answerRows = chatHistory.querySelectorAll(".message-bubble-row[data-sources]");
+  showInspectorFor(answerRows[answerRows.length - 1] || null);
   switchWorkspaceView(hasMessages ? "chatFeedWindow" : "welcomeScreen");
   renderChatSessions();
 
@@ -1194,6 +1196,7 @@ function resetChatWorkspace() {
   activeSessionId = null;
   hasMessages = false;
   clearStagedAttachment();
+  showInspectorFor(null);
   renderChatSessions();
   
   // Update Nav
@@ -1627,7 +1630,7 @@ function parseMarkdown(text) {
   html = html.replace(citationRegex, (match, filename, page) => {
     const citationId = `${filename} p. ${page}`;
     const truncatedText = filename.length > 25 ? filename.slice(0, 22) + "..." : filename;
-    return `<span class="citation-link" onclick="highlightSource('${citationId}')" title="Click to inspect source text">${truncatedText} p. ${page}</span>`;
+    return `<span class="citation-link" onclick="highlightSource('${citationId}', this)" title="Click to inspect source text">${truncatedText} p. ${page}</span>`;
   });
 
   // Remove newlines between HTML tags to prevent <br> gaps between block elements (e.g. </h4>\n\n<li>)
@@ -1765,6 +1768,12 @@ async function submitQuery(query) {
       const safeAnswer = payload.answer || "I'm sorry, I couldn't generate a valid answer for that query. Please try asking in a different way.";
       updateMessage(loadingId, safeAnswer);
       addReadAloudButton(loadingId, safeAnswer);
+      const answerRow = document.getElementById(loadingId);
+      if (answerRow) {
+        answerRow.dataset.sources = JSON.stringify(payload.sources || []);
+        answerRow.dataset.trace = JSON.stringify(payload.trace || []);
+        persistActiveSession();
+      }
     
     // Add routing info trace to loading bubble footer if active
     // Small talk and replies about an earlier answer have no routing or grounding to show
@@ -1773,8 +1782,7 @@ async function submitQuery(query) {
     }
 
     // Populate Inspector panel
-    renderSources(payload.sources);
-    renderRouteTrace(payload.route, payload.trace);
+    showInspectorFor(document.getElementById(loadingId));
 
     // Auto-open sources tab in desktop if sources exist
     if (window.innerWidth >= 900 && payload.sources && payload.sources.length > 0) {
@@ -1845,6 +1853,34 @@ function appendMetadataFooter(msgId, route, confidence) {
 }
 
 // Render grounding sources in right sidebar
+function sourceHostname(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch (error) {
+    return url;
+  }
+}
+
+function trimSnippet(text, limit = 320) {
+  const clean = (text || "").replace(/\s+/g, " ").trim();
+  return clean.length > limit ? `${clean.slice(0, limit - 3)}...` : clean;
+}
+
+// Each answer stores its own sources and trace, so older answers and reopened chats show the right ones
+function showInspectorFor(msgRow) {
+  let sources = [];
+  let trace = [];
+  try {
+    sources = JSON.parse(msgRow?.dataset.sources || "[]");
+    trace = JSON.parse(msgRow?.dataset.trace || "[]");
+  } catch (error) {
+    console.warn("Could not read stored sources:", error);
+  }
+  inspectorSourcesList.dataset.msgId = msgRow ? msgRow.id : "";
+  renderSources(sources);
+  renderRouteTrace(null, trace);
+}
+
 function renderSources(sources) {
   if (!sources || !sources.length) {
     inspectorSourcesList.innerHTML = `
@@ -1858,6 +1894,7 @@ function renderSources(sources) {
 
   inspectorSourcesList.innerHTML = "";
   sources.forEach(src => {
+    const isWeb = src.insurer === "Web Search";
     const card = document.createElement("div");
     card.className = `source-card ${getInsurerClass(src.insurer)}`;
     card.id = `src-${src.citation.replace(/[\s\.]/g, "-")}`;
@@ -1867,18 +1904,20 @@ function renderSources(sources) {
 
     const title = document.createElement("span");
     title.className = "source-title";
-    title.textContent = src.citation;
+    title.textContent = isWeb ? sourceHostname(src.citation) : src.citation;
+    title.title = src.citation;
 
     const badge = document.createElement("span");
     badge.className = "source-badge";
-    badge.textContent = src.insurer;
+    badge.textContent = isWeb ? "Web" : src.uploaded ? "Your PDF" : src.insurer;
 
     header.appendChild(title);
     header.appendChild(badge);
 
     const snippet = document.createElement("div");
     snippet.className = "source-snippet";
-    snippet.innerHTML = src.snippet;
+    // Plain text: snippets come from PDFs and web pages and may contain "<" or HTML
+    snippet.textContent = trimSnippet(isWeb ? src.snippet.replace(/^Source \[[^\]]*\]:\s*/, "") : src.snippet);
 
     const footer = document.createElement("div");
     footer.className = "source-footer";
@@ -1886,11 +1925,13 @@ function renderSources(sources) {
     const product = document.createElement("span");
     product.textContent = src.product;
 
-    const score = document.createElement("span");
-    score.textContent = `Score: ${src.score}`;
-
     footer.appendChild(product);
-    footer.appendChild(score);
+    // Web results have no search score; 0 marks a page used because the question named the whole PDF
+    if (!isWeb && src.score > 0) {
+      const score = document.createElement("span");
+      score.textContent = `Score: ${src.score}`;
+      footer.appendChild(score);
+    }
 
     card.appendChild(header);
     card.appendChild(snippet);
@@ -1954,7 +1995,12 @@ function renderRouteTrace(route, trace) {
 }
 
 // Click citation in assistant feed -> focus and scroll in inspector card
-function highlightSource(citationId) {
+function highlightSource(citationId, linkEl = null) {
+  const msgRow = linkEl ? linkEl.closest(".message-bubble-row") : null;
+  if (msgRow && msgRow.dataset.sources && inspectorSourcesList.dataset.msgId !== msgRow.id) {
+    showInspectorFor(msgRow);
+  }
+
   // Open inspector if closed
   appDashboard.classList.add("inspector-open");
   appInspector.classList.remove("hidden");

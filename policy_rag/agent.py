@@ -861,6 +861,7 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
                     "page_number": hit.record.page_number,
                     "score": round(hit.score, 3),
                     "snippet": hit.highlight,
+                    "uploaded": hit.record.source_path.startswith("uploaded/"),
                 }
             )
 
@@ -975,7 +976,8 @@ def answer_query(index: PageIndex, query: str, file_name: str | None = None, mod
             if s['citation'].startswith("http"):
                 sources_text += f"- [{s['citation']}]({s['citation']})\n"
             else:
-                sources_text += f"- **{s['citation']}**\n"
+                # Square brackets make the client render it as a clickable citation badge
+                sources_text += f"- [{s['citation']}]\n"
         answer += sources_text
         trace.append("generator: appended clean formatted citations to the answer")
 
